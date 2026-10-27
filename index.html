@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>夜のシフト観察記 — 放置ゲーム</title>
+<style>
+:root{--bg:#121318;--panel:#1b1d25;--panel2:#22252f;--line:#2e3240;--text:#e4e6ee;--sub:#9aa0b4;--acc:#b48cff;--ok:#5fd39a;--warn:#f2c25b;--bad:#ff6b7d;--blue:#6aa8ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif;font-size:14px;line-height:1.5}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:10px 14px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+header h1{font-size:15px;margin:0;color:var(--acc);font-weight:600}
+#clock{font-variant-numeric:tabular-nums;font-size:15px}
+.speed{display:flex;gap:4px;margin-left:auto}
+button{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:13px;cursor:pointer}
+button:hover:not(:disabled){border-color:var(--acc)}
+button:disabled{opacity:.4;cursor:default}
+button.on{background:var(--acc);color:#16121f;border-color:var(--acc);font-weight:600}
+main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1.2fr);gap:12px;padding:12px;max-width:1150px;margin:0 auto}
+@media(max-width:760px){main{grid-template-columns:1fr;padding:8px}.speed{margin-left:0}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.card h2{font-size:12px;letter-spacing:.08em;color:var(--sub);margin:0 0 8px;font-weight:600}
+.prof{display:flex;gap:12px;align-items:center}
+.avatar{font-size:40px;width:60px;height:60px;display:grid;place-items:center;background:var(--panel2);border-radius:50%;border:2px solid var(--line)}
+.name{font-size:17px;font-weight:600}
+.small{color:var(--sub);font-size:12px}
+.status{display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:3px 10px;border-radius:999px;background:var(--panel2);font-size:13px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--sub)}
+.bar{margin:8px 0}
+.bar .lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--sub)}
+.bar .tr{height:9px;background:var(--panel2);border-radius:5px;overflow:hidden;margin-top:3px}
+.bar .fl{height:100%;border-radius:5px;transition:width .4s}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media(max-width:420px){.grid{grid-template-columns:repeat(2,1fr)}}
+.stat{background:var(--panel2);border-radius:8px;padding:7px 9px}
+.stat .k{font-size:11px;color:var(--sub)}
+.stat .v{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
+.acts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.acts button{padding:9px 6px;text-align:left}
+.acts .cd{display:block;font-size:11px;color:var(--sub)}
+#log{height:300px;overflow-y:auto;font-size:13px;font-variant-numeric:tabular-nums;padding-right:4px}
+#log div{padding:3px 0;border-bottom:1px dashed #262a36}
+#log .t{color:var(--sub);margin-right:6px}
+.ev{color:var(--warn)}.gd{color:var(--ok)}.bd{color:var(--bad)}.sy{color:var(--blue)}
+#reports{max-height:260px;overflow-y:auto}
+.rep{background:var(--panel2);border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:12.5px}
+.rep b{color:var(--acc)}
+.rep table{width:100%;border-collapse:collapse;margin-top:4px}
+.rep td{padding:1px 0}.rep td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.badges{display:flex;flex-wrap:wrap;gap:6px}
+.bdg{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:4px 8px;font-size:12px;opacity:.35}
+.bdg.got{opacity:1;border-color:var(--acc)}
+.tabs{display:flex;gap:6px;margin-bottom:8px}
+.full{grid-column:1/-1}
+#modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:10;padding:16px}
+#modal .box{background:var(--panel);border:1px solid var(--acc);border-radius:14px;padding:18px;max-width:420px;width:100%}
+#modal h3{margin:0 0 10px;color:var(--acc);font-size:16px}
+.goalrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+footer{text-align:center;color:var(--sub);font-size:11px;padding:10px 0 20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌙 夜のシフト観察記</h1>
+  <div id="clock">-</div>
+  <div class="speed" id="speed"></div>
+</header>
+<main>
+  <section class="card">
+    <h2>PROFILE</h2>
+    <div class="prof">
+      <div class="avatar" id="avatar">🙂</div>
+      <div>
+        <div class="name">ひより <span class="small">22歳 / 源氏名「ひより」</span></div>
+        <div class="small" id="rank">ランク: -</div>
+        <div class="status"><span class="dot" id="sdot"></span><span id="status">-</span></div>
+        <div class="small" id="weather" style="margin-top:4px">-</div>
+      </div>
+    </div>
+    <div id="bars"></div>
+    <div class="small" id="dream"></div>
+  </section>
+
+  <section class="card">
+    <h2>TODAY / 本日の成績</h2>
+    <div class="grid" id="today"></div>
+    <h2 style="margin-top:12px">TOTAL / 通算</h2>
+    <div class="grid" id="total"></div>
+  </section>
+
+  <section class="card">
+    <h2>ACTIONS / 見守りアクション</h2>
+    <div class="acts" id="acts"></div>
+    <div class="small" id="goalinfo" style="margin-top:8px"></div>
+  </section>
+
+  <section class="card">
+    <h2>EVENT LOG</h2>
+    <div id="log"></div>
+  </section>
+
+  <section class="card">
+    <h2>DAILY REPORT / 日報</h2>
+    <div id="reports"><div class="small">まだ日報はありません。シフト終了後に作成されます。</div></div>
+  </section>
+
+  <section class="card">
+    <h2>BADGES / 実績</h2>
+    <div class="badges" id="badges"></div>
+    <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+      <button id="resetBtn">データをリセット</button>
+    </div>
+  </section>
+</main>
+<footer>架空のキャラクターによるフィクションです。表示はステータス・数値・記録のみ。データはこのブラウザに自動保存されます。</footer>
+<div id="modal"><div class="box"><h3 id="mTitle"></h3><div id="mBody"></div><div style="text-align:right;margin-top:14px"><button id="mClose">閉じる</button></div></div></div>
+
+<script>
+"use strict";
+const SAVE_KEY = "hiyori_idle_v1";
+const SPEEDS = [0, 1, 5, 20, 60];        // ゲーム内の分 / 実時間1秒
+const OFFLINE_CAP = 7 * 24 * 60;          // オフライン進行の上限(分)
+const WD = ["日","月","火","水","木","金","土"];
+const ST = {
+  sleep:{l:"睡眠中",i:"😴",c:"#6a6f88"}, off:{l:"オフ",i:"☕",c:"#6aa8ff"}, prep:{l:"出勤準備",i:"💄",c:"#b48cff"},
+  wait:{l:"待機中",i:"📱",c:"#5fd39a"}, move:{l:"移動中",i:"🚕",c:"#f2c25b"}, work:{l:"接客中",i:"⏳",c:"#ff9f6b"},
+  back:{l:"帰り移動",i:"🚕",c:"#f2c25b"}, rest:{l:"休憩中",i:"🍵",c:"#7fd0d0"}, home:{l:"帰宅中",i:"🏠",c:"#6a6f88"}, dayoff:{l:"休日",i:"🌿",c:"#6aa8ff"}
+};
+const RANKS = [
+  {n:"新人",need:0,r:0,bonus:0},{n:"レギュラー",need:15,r:3.6,bonus:.03},{n:"人気キャスト",need:50,r:3.9,bonus:.06},
+  {n:"上位キャスト",need:120,r:4.1,bonus:.09},{n:"ランキング常連",need:250,r:4.3,bonus:.12},{n:"トップキャスト",need:450,r:4.5,bonus:.15}
+];
+const COURSES = [{m:60,p:16000},{m:90,p:23000},{m:120,p:30000}];
+const BADGES = [
+  ["first","🔰","はじめての出勤"],["s10","🎯","通算10件"],["s100","💯","通算100件"],["reg1","🤝","初めての常連"],
+  ["reg10","👑","常連10人"],["d50k","💴","日売上5万"],["d100k","💰","日売上10万"],["sv500k","🏦","貯金50万"],
+  ["sv2m","🗝️","貯金200万"],["rank1","⭐","ランクアップ"],["rank3","🌟","上位キャスト到達"],["goal","🏁","目標達成"],
+  ["star5","✨","★5評価"],["care","🫶","差し入れ10回"],["week","📅","7日間記録"],["rain","☔","雨の日出勤"]
+];
+const FOODS = ["おにぎり🍙","コンビニのパスタ🍝","あったかいスープ🥣","プリン🍮","サンドイッチ🥪","たい焼き🐟","フルーツ🍓"];
+const OFFACTS = ["専門学校の課題をしている","カフェで休んでいる","買い物に出かけている","部屋の片付けをしている","友達とお茶している","語学の勉強をしている","昼寝している"];
+
+function defState(){
+  return {v:1,t:(1*24+11)*60,speed:1,last:Date.now(),
+    st:"off",stEnd:0,sub:OFFACTS[0],cur:null,
+    hp:85,mp:80,money:120000,dream:3000000,
+    rating:[],total:0,totalSales:0,regs:{},nextCust:1,
+    day:{n:0,sales:0,count:0,nom:0,ratings:[],ev:[],start:null,early:false,goalHit:false},
+    weather:"晴れ",demand:1,offTomorrow:false,isOff:false,
+    goal:0,cd:{rest:0,food:0,msg:0,off:0},care:0,badges:{},reports:[],log:[],rank:0,days:0};
+}
+let S = load();
+
+function load(){
+  try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)); if(d&&d.v===1) return Object.assign(defState(),d);}catch(e){}
+  return defState();
+}
+function save(){S.last=Date.now(); try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
+
+// ---------- utilities ----------
+const R = Math.random;
+const ri = (a,b)=>a+Math.floor(R()*(b-a+1));
+const pick = a=>a[Math.floor(R()*a.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const hm = t=>{const m=((t%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");};
+const dayNo = t=>Math.floor(t/1440);
+const yen = n=>"¥"+Math.round(n).toLocaleString("ja-JP");
+const avg = a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const mod = t=>((t%1440)+1440)%1440;
+let quiet=false, offSum=null;
+
+function log(msg,cls=""){
+  S.log.push({t:S.t,m:msg,c:cls}); if(S.log.length>250) S.log.splice(0,S.log.length-250);
+  if(offSum && cls) offSum.ev++;
+}
+function setSt(st,dur=0){S.st=st;S.stEnd=S.t+dur;}
+function rankBonus(){return RANKS[S.rank].bonus;}
+function ratingAvg(){return S.rating.length?avg(S.rating):3.5;}
+function grant(id){
+  if(S.badges[id]) return; S.badges[id]=S.t;
+  const b=BADGES.find(x=>x[0]===id); log(`🏅 実績解除: ${b[1]} ${b[2]}`,"gd");
+}
+
+// ---------- simulation (1 game minute) ----------
+function step(){
+  S.t++;
+  const m=mod(S.t);
+  const wd=new Date(2026,0,4+dayNo(S.t)).getDay(); // 0=日
+  // 日付変更の前処理(11:00に新しい「日」が始まる)
+  if(m===11*60) newDay(wd);
+
+  // シフト終了判定(深夜3時以降、待機/休憩に戻った時点で退勤)
+  if(["wait","rest"].includes(S.st) && m>=3*60 && m<11*60) endShift(false);
+  const st=S.st;
+  // 状態ごとの消耗/回復
+  const d={sleep:[.22,.08],off:[.02,.05],dayoff:[.05,.1],prep:[0,0],wait:[-.02,-.01],move:[-.05,-.02],work:[-.11,-.05],back:[-.05,-.01],rest:[.15,.12],home:[-.02,0]}[st]||[0,0];
+  S.hp=clamp(S.hp+d[0],0,100); S.mp=clamp(S.mp+d[1]*(S.weather==="雨"&&st!=="sleep"?.6:1),0,100);
+
+  switch(st){
+    case "sleep": if(m===11*60){ setSt(S.isOff?"dayoff":"off"); S.sub=pick(OFFACTS); log(S.isOff?"🌿 今日はお休み。ゆっくり過ごす":"☀️ 起床。"+S.sub.replace("している","する予定"),"sy"); } break;
+    case "off": case "dayoff":
+      if(m%120===0) S.sub=pick(OFFACTS);
+      if(st==="off" && m===17*60+30){ setSt("prep",30); log("💄 出勤準備を始めた"); }
+      if(m===2*60){ setSt("sleep"); log("😴 就寝","sy"); }
+      break;
+    case "prep": if(S.t>=S.stEnd) startShift(); break;
+    case "wait": waitTick(m,wd); break;
+    case "move": if(S.t>=S.stEnd){ setSt("work",S.cur.m); log(`⏳ 接客開始 (${S.cur.m}分コース / ${S.cur.name})`); } break;
+    case "work": if(S.t>=S.stEnd) finishWork(); break;
+    case "back":
+      if(S.t>=S.stEnd){ setSt("wait"); checkTired(); }
+      break;
+    case "rest":
+      if(S.t>=S.stEnd){ setSt("wait"); log("📱 休憩終了、待機に戻った"); }
+      break;
+    case "home": if(S.t>=S.stEnd){ setSt("sleep"); log("😴 帰宅して就寝","sy"); } break;
+  }
+  // ランダムイベント
+  if(["wait","off","dayoff"].includes(S.st) && R()<0.0025) randomEvent();
+  // クールダウン
+  for(const k in S.cd) if(S.cd[k]>0) S.cd[k]--;
+}
+
+function newDay(wd){
+  S.days++;
+  S.isOff = S.offTomorrow || wd===3; S.offTomorrow=false;
+  S.weather = R()<.22?"雨":(R()<.3?"くもり":"晴れ");
+  S.demand = (wd===5||wd===6?1.35:wd===0?1.1:1) * (S.weather==="雨"?.8:1);
+  S.day={n:dayNo(S.t),sales:0,count:0,nom:0,ratings:[],ev:[],start:null,early:false,goalHit:false};
+  if(S.days>=7) grant("week");
+}
+function startShift(){
+  setSt("wait"); S.day.start=S.t;
+  log(`🟢 出勤しました (${S.weather==="雨"?"☔ 雨":S.weather})`,"gd");
+  grant("first"); if(S.weather==="雨") grant("rain");
+}
+function waitTick(m,wd){
+  // 時間帯で需要変化
+  const h=Math.floor(m/60);
+  const tm = h>=20&&h<=24||h===0 ? 1.4 : h>=1&&h<3 ? .9 : .8;
+  const rk = 1+S.rank*.15;
+  const p = .016*tm*rk*S.demand*(0.7+ratingAvg()/10);
+  if(R()<p) newBooking(false);
+  else checkTired();
+}
+function newBooking(forceReg){
+  const regIds=Object.keys(S.regs);
+  let reg = forceReg || (regIds.length && R()< Math.min(.65,.15+regIds.length*.04));
+  let name, id;
+  if(reg && regIds.length){ id=pick(regIds); name=S.regs[id].name; }
+  else { reg=false; id="c"+(S.nextCust++); name=String.fromCharCode(65+ri(0,25))+"様 #"+id.slice(1)+"(新規)"; }
+  const c=COURSES[R()<.55?0:R()<.7?1:2];
+  const mv=ri(15,30)+(S.weather==="雨"?10:0);
+  S.cur={id,name,reg,m:c.m,p:c.p};
+  setSt("move",mv);
+  log(`📞 予約が入った ${reg?"【指名】":""}${name} / ${c.m}分 → 移動 ${mv}分`, reg?"gd":"");
+}
+function finishWork(){
+  const c=S.cur;
+  let r = 3.3 + (S.hp-50)/80 + (S.mp-50)/70 + S.rank*.08 + (R()-.5)*1.4 + (c.reg?.3:0);
+  r = Math.round(clamp(r,1,5)*10)/10;
+  const nom = c.reg?2000:0;
+  const pay = (c.p*(.55+rankBonus()))+nom;
+  S.money+=pay; S.day.sales+=pay; S.totalSales+=pay; S.day.count++; S.total++;
+  if(c.reg) S.day.nom++;
+  S.rating.push(r); if(S.rating.length>40) S.rating.shift();
+  S.day.ratings.push(r);
+  S.mp=clamp(S.mp+(r>=4.5?4:r<3?-6:0),0,100);
+  log(`✅ 接客終了 評価 ★${r.toFixed(1)} / 手取り ${yen(pay)}`, r>=4?"gd":r<3?"bd":"");
+  if(r>=5) grant("star5");
+  // 常連化
+  if(S.regs[c.id]) S.regs[c.id].visits++;
+  else if(r>=4 && R()<.35){ S.regs[c.id]={name:c.name.replace("(新規)","(常連)"),visits:1}; log(`🤝 ${c.name.replace("(新規)","")} がリピーターになった`,"gd"); }
+  S.cur=null; setSt("back",ri(15,25));
+  checkBadges(); checkRank();
+  if(S.goal && !S.day.goalHit && S.day.sales>=S.goal){ S.day.goalHit=true; S.mp=clamp(S.mp+12,0,100); log(`🏁 本日の目標 ${yen(S.goal)} 達成!`,"gd"); grant("goal"); }
+}
+function checkTired(){
+  if(S.st!=="wait") return;
+  if(S.hp<12 || S.mp<10){ log("⚠️ 限界に近いので早退することにした","bd"); endShift(true); return; }
+  if(S.hp<28 || S.mp<25){ setSt("rest",ri(30,50)); log("🍵 疲れたので休憩に入った"); }
+}
+function endShift(early){
+  const d=S.day; d.early=early;
+  const rep={day:d.n,date:dateStr(d.n),hours:d.start?Math.round((S.t-d.start)/6)/10:0,count:d.count,nom:d.nom,sales:d.sales,
+    rate:d.ratings.length?avg(d.ratings):0,hp:Math.round(S.hp),mp:Math.round(S.mp),weather:S.weather,early,ev:d.ev.slice(0,4),goal:S.goal,goalHit:d.goalHit,rank:RANKS[S.rank].n};
+  S.reports.unshift(rep); if(S.reports.length>30) S.reports.pop();
+  log(`🔴 退勤 本日 ${d.count}件 / ${yen(d.sales)}${early?" (早退)":""}`,"sy");
+  setSt("home",30);
+}
+function checkBadges(){
+  if(S.total>=10) grant("s10"); if(S.total>=100) grant("s100");
+  const n=Object.keys(S.regs).length; if(n>=1) grant("reg1"); if(n>=10) grant("reg10");
+  if(S.day.sales>=50000) grant("d50k"); if(S.day.sales>=100000) grant("d100k");
+  if(S.money>=500000) grant("sv500k"); if(S.money>=2000000) grant("sv2m");
+}
+function checkRank(){
+  const nx=RANKS[S.rank+1]; if(!nx) return;
+  if(S.total>=nx.need && ratingAvg()>=nx.r){ S.rank++; log(`⭐ ランクアップ! 「${nx.n}」になった`,"ev"); S.mp=clamp(S.mp+10,0,100); grant("rank1"); if(S.rank>=3) grant("rank3"); }
+}
+function randomEvent(){
+  const working = S.st==="wait";
+  const evs = working ? [
+    ["☔ 急に雨が降り出した。移動に時間がかかりそう",()=>{S.weather="雨";S.demand*=.85;}],
+    ["🔁 常連さんから直接予約!",()=>{ if(Object.keys(S.regs).length) newBooking(true); else S.mp+=3; }],
+    ["🤒 少し体調が悪い…",()=>{S.hp-=15;S.mp-=8;}],
+    ["📝 サイトに嬉しい口コミが載った",()=>{S.mp+=10;S.demand*=1.1;}],
+    ["👔 店長に最近の頑張りを褒められた",()=>{S.mp+=8;}],
+    ["🌀 今日は全体的に暇な日らしい",()=>{S.demand*=.8;S.mp-=4;}],
+    ["💬 同僚と待機室で雑談して気が晴れた",()=>{S.mp+=6;}],
+    ["📢 写メ日記の更新が好評",()=>{S.demand*=1.15;}],
+  ] : [
+    ["🛍️ 欲しかった物を買えた",()=>{S.mp+=8;S.money-=ri(3,12)*1000;}],
+    ["📚 課題がうまく進んだ",()=>{S.mp+=6;}],
+    ["🤧 少し風邪気味かも",()=>{S.hp-=10;}],
+    ["📱 家族から元気?と連絡がきた",()=>{S.mp+=5;}],
+    ["☔ 雨で外出をやめた",()=>{S.weather="雨";}],
+  ];
+  const e=pick(evs); log(e[0],"ev"); S.day.ev.push(e[0]); e[1]();
+  S.hp=clamp(S.hp,0,100); S.mp=clamp(S.mp,0,100);
+}
+function dateStr(n){const d=new Date(2026,0,4+n);return `${d.getMonth()+1}/${d.getDate()}(${WD[d.getDay()]})`;}
+
+// ---------- player actions ----------
+const ACTS = [
+  {k:"rest",l:"🍵 休憩を促す",cd:90,can:()=>S.st==="wait",
+   go:()=>{setSt("rest",30);S.mp=clamp(S.mp+4,0,100);log("🍵 あなたのすすめで少し休憩することにした","sy");}},
+  {k:"food",l:"🍙 ごはんを差し入れ",cd:240,can:()=>S.st!=="sleep",
+   go:()=>{const f=pick(FOODS);S.hp=clamp(S.hp+15,0,100);S.mp=clamp(S.mp+6,0,100);S.care++;log(`🎁 ${f}を差し入れた。ひより「ありがと、助かる!」`,"sy");if(S.care>=10)grant("care");}},
+  {k:"msg",l:"💌 応援メッセージ",cd:120,can:()=>S.st!=="sleep",
+   go:()=>{S.mp=clamp(S.mp+9,0,100);log("💌 応援メッセージを送った。既読がついてスタンプが返ってきた","sy");}},
+  {k:"off",l:"🌿 明日を休日にする",cd:1440,can:()=>!S.offTomorrow,
+   go:()=>{S.offTomorrow=true;log("🌿 明日はお休みにしよう、と提案した","sy");}},
+  {k:"goal",l:"🏁 今日の目標を設定",cd:0,can:()=>true,go:()=>openGoal()},
+  {k:"stats",l:"📊 常連リスト",cd:0,can:()=>true,go:()=>openRegs()},
+];
+function act(a){ if(!a.can()||S.cd[a.k]>0) return; a.go(); if(a.cd) S.cd[a.k]=a.cd; save(); render(true); }
+function openGoal(){
+  const opts=[0,30000,50000,80000,120000];
+  modal("🏁 今日の売上目標",`<div class="small">達成するとメンタルが回復し、実績が解除されます。</div><div class="goalrow">${opts.map(v=>`<button data-g="${v}" class="${S.goal===v?"on":""}">${v?yen(v):"なし"}</button>`).join("")}</div>`);
+  document.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{S.goal=+b.dataset.g;log(S.goal?`🏁 目標を ${yen(S.goal)} に設定した`:"🏁 目標を解除した","sy");save();closeModal();render(true);});
+}
+function openRegs(){
+  const r=Object.values(S.regs).sort((a,b)=>b.visits-a.visits);
+  modal("📊 常連リスト",r.length?`<table style="width:100%">${r.slice(0,20).map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${x.visits}回</td></tr>`).join("")}</table>`:"<div class='small'>まだ常連はいません。</div>");
+}
+function modal(t,h){document.getElementById("mTitle").textContent=t;document.getElementById("mBody").innerHTML=h;document.getElementById("modal").style.display="flex";}
+function closeModal(){document.getElementById("modal").style.display="none";}
+
+// ---------- rendering ----------
+const $=id=>document.getElementById(id);
+let lastLogLen=-1, lastRep=-1;
+function bar(lbl,v,max,col,txt){return `<div class="bar"><div class="lbl"><span>${lbl}</span><span>${txt??Math.round(v)+" / "+max}</span></div><div class="tr"><div class="fl" style="width:${clamp(v/max*100,0,100)}%;background:${col}"></div></div></div>`;}
+function stat(k,v){return `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;}
+function render(force){
+  const s=ST[S.st]||ST.off, m=mod(S.t);
+  $("clock").textContent=`${dateStr(dayNo(S.t))} ${hm(S.t)}`;
+  $("avatar").textContent = S.hp<25||S.mp<25?"😣":S.st==="sleep"?"😴":S.mp>75?"😊":"🙂";
+  $("avatar").style.borderColor=s.c;
+  $("sdot").style.background=s.c;
+  let sub="";
+  if(S.st==="off"||S.st==="dayoff") sub=" — "+S.sub;
+  if((S.st==="move"||S.st==="work")&&S.cur) sub=` — ${S.cur.name}`;
+  if(S.stEnd>S.t) sub+=` (残り${S.stEnd-S.t}分)`;
+  $("status").textContent=`${s.i} ${s.l}${sub}`;
+  $("weather").textContent=`天気: ${S.weather==="雨"?"☔ 雨":S.weather==="くもり"?"☁️ くもり":"☀️ 晴れ"} / 客足 ${Math.round(S.demand*100)}%${S.offTomorrow?" / 明日は休日":""}`;
+  const nx=RANKS[S.rank+1];
+  $("rank").textContent=`ランク: ${RANKS[S.rank].n}`+(nx?` (次:${nx.n} 通算${nx.need}件・平均★${nx.r})`:" (最高ランク)");
+  $("bars").innerHTML = bar("体力",S.hp,100,S.hp<30?"var(--bad)":"var(--ok)") + bar("メンタル",S.mp,100,S.mp<30?"var(--bad)":"var(--blue)")
+    + bar("評価 (直近平均)",ratingAvg(),5,"var(--warn)","★"+ratingAvg().toFixed(2)) + bar("夢の貯金 (留学資金)",S.money,S.dream,"var(--acc)",yen(S.money)+" / "+yen(S.dream));
+  $("dream").textContent="目標: 昼は専門学校生。留学資金を貯めている。";
+  const d=S.day, regN=Object.keys(S.regs).length, uniq=S.nextCust-1;
+  $("today").innerHTML = stat("接客数",d.count+"件")+stat("指名数",d.nom+"件")+stat("売上(手取り)",yen(d.sales))
+    + stat("本日の評価",d.ratings.length?"★"+avg(d.ratings).toFixed(1):"-")+stat("目標",S.goal?(d.goalHit?"✅ ":"")+yen(S.goal):"なし")
+    + stat("勤務時間", d.start&&["wait","move","work","back","rest"].includes(S.st)?Math.floor((S.t-d.start)/60)+"h"+((S.t-d.start)%60)+"m":"-");
+  $("total").innerHTML = stat("通算接客",S.total+"件")+stat("常連数",regN+"人")+stat("リピーター率",uniq?Math.round(regN/uniq*100)+"%":"-")
+    + stat("通算売上",yen(S.totalSales))+stat("貯金",yen(S.money))+stat("記録日数",S.days+"日");
+  $("acts").innerHTML = ACTS.map((a,i)=>{const cd=S.cd[a.k]||0;const dis=!a.can()||cd>0;return `<button data-a="${i}" ${dis?"disabled":""}>${a.l}<span class="cd">${cd>0?"あと"+Math.floor(cd/60)+"h"+cd%60+"m":a.can()?"実行できます":"今はできない"}</span></button>`;}).join("");
+  document.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>act(ACTS[+b.dataset.a]));
+  $("goalinfo").textContent=S.goal?`本日の目標: ${yen(S.goal)} (${Math.min(100,Math.round(d.sales/S.goal*100))}%)`:"目標は未設定です。";
+  $("speed").innerHTML = SPEEDS.map(v=>`<button data-s="${v}" class="${S.speed===v?"on":""}">${v===0?"⏸":v===1?"▶ 1x":"⏩ "+v+"x"}</button>`).join("");
+  document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{S.speed=+b.dataset.s;save();render(true);});
+  // log
+  const lk=S.log.length+":"+(S.log.length?S.log[S.log.length-1].t:0);
+  if(force||lk!==lastLogLen){
+    lastLogLen=lk; const el=$("log");
+    el.innerHTML=S.log.slice(-120).reverse().map(x=>`<div class="${x.c}"><span class="t">${dateStr(dayNo(x.t))} ${hm(x.t)}</span>${esc(x.m)}</div>`).join("");
+  }
+  if(force||S.reports.length!==lastRep||(S.reports[0]&&S.reports[0].day!==lastRep)){
+    lastRep=S.reports.length;
+    if(S.reports.length) $("reports").innerHTML=S.reports.map(r=>`<div class="rep"><b>📋 ${r.date} の日報</b> ${r.early?"<span class='bd'>(早退)</span>":""}<span class="small"> ${r.weather} / ${r.rank}</span>
+      <table><tr><td>勤務時間</td><td>${r.hours}h</td></tr><tr><td>接客数 / 指名</td><td>${r.count}件 / ${r.nom}件</td></tr>
+      <tr><td>売上(手取り)</td><td>${yen(r.sales)}</td></tr><tr><td>平均評価</td><td>${r.rate?"★"+r.rate.toFixed(2):"-"}</td></tr>
+      <tr><td>退勤時 体力 / メンタル</td><td>${r.hp} / ${r.mp}</td></tr>${r.goal?`<tr><td>目標 ${yen(r.goal)}</td><td>${r.goalHit?"✅ 達成":"未達"}</td></tr>`:""}</table>
+      ${r.ev.length?`<div class="small" style="margin-top:3px">出来事: ${r.ev.map(esc).join(" / ")}</div>`:""}</div>`).join("");
+  }
+  $("badges").innerHTML=BADGES.map(b=>`<span class="bdg ${S.badges[b[0]]?"got":""}" title="${b[2]}">${b[1]} ${b[2]}</span>`).join("");
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+// ---------- offline progress ----------
+function offline(){
+  const sec=(Date.now()-(S.last||Date.now()))/1000;
+  const sp=S.speed||1;
+  const mins=Math.min(OFFLINE_CAP,Math.floor(sec*sp));
+  if(mins<5) return;
+  const before={money:S.money,total:S.total,days:S.days,rank:S.rank,reg:Object.keys(S.regs).length};
+  offSum={ev:0};
+  for(let i=0;i<mins;i++) step();
+  const ev=offSum.ev; offSum=null;
+  log(`🕰️ 留守中に ${Math.floor(mins/60)}時間${mins%60}分 経過しました`,"sy");
+  modal("🕰️ おかえりなさい",`<div>留守中にゲーム内で <b>${Math.floor(mins/60)}時間${mins%60}分</b> が経過しました${mins>=OFFLINE_CAP?"(上限7日)":""}。</div>
+   <table style="width:100%;margin-top:8px">
+   <tr><td>接客数</td><td style="text-align:right">+${S.total-before.total}件</td></tr>
+   <tr><td>貯金</td><td style="text-align:right">${S.money-before.money>=0?"+":""}${yen(S.money-before.money)}</td></tr>
+   <tr><td>新しい常連</td><td style="text-align:right">+${Object.keys(S.regs).length-before.reg}人</td></tr>
+   <tr><td>経過日数</td><td style="text-align:right">+${S.days-before.days}日</td></tr>
+   ${S.rank>before.rank?`<tr><td>ランク</td><td style="text-align:right">⭐ ${RANKS[S.rank].n}</td></tr>`:""}
+   </table><div class="small" style="margin-top:6px">詳しくはイベントログと日報をどうぞ。</div>`);
+}
+
+// ---------- main loop ----------
+let acc=0, prev=performance.now();
+function loop(now){
+  const dt=Math.min(5,(now-prev)/1000); prev=now;
+  acc+=dt*S.speed;
+  let n=0; while(acc>=1 && n<600){ step(); acc--; n++; }
+  if(n) render(false);
+  requestAnimationFrame(loop);
+}
+$("mClose").onclick=closeModal;
+$("modal").onclick=e=>{if(e.target.id==="modal")closeModal();};
+$("resetBtn").onclick=()=>{ if(confirm("すべての記録をリセットしますか?")){localStorage.removeItem(SAVE_KEY);S=defState();lastLogLen=-1;lastRep=-1;$("reports").innerHTML='<div class="small">まだ日報はありません。</div>';intro();render(true);} };
+function intro(){ if(!S.log.length){ log("🌙 観察を始めます。ひより(22)は昼は専門学校生、夜はお店に在籍して留学資金を貯めている。","sy"); log("💡 右上で時間の速さを変えられます。基本は眺めるだけでOK。","sy"); } }
+document.addEventListener("visibilitychange",()=>{ if(document.hidden) save(); else { offline(); render(true);} });
+window.addEventListener("beforeunload",save);
+setInterval(save,10000);
+intro(); offline(); render(true); save();
+requestAnimationFrame(loop);
+// テスト用フック
+window.__game={get S(){return S},step,render};
+</script>
+</body>
+</html>
