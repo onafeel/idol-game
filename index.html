@@ -67,6 +67,9 @@ main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1.2fr);ga
 #modal .box{background:var(--panel);border:1px solid var(--acc);border-radius:14px;padding:18px;max-width:420px;width:100%;max-height:90vh;display:flex;flex-direction:column}
 #mBody{overflow-y:auto;min-height:0}
 #modal .box.wide{max-width:560px}
+.otab{width:100%;margin-top:8px;border-collapse:collapse;font-size:13px}
+.otab td{padding:3px 2px;border-bottom:1px solid var(--line);vertical-align:top}
+.otab td.r{text-align:right;white-space:nowrap;padding-left:8px}
 .crow{cursor:pointer}.crow:hover{outline:1px solid var(--acc)}
 .chead{background:var(--panel2);border-radius:8px;padding:6px 9px;margin-bottom:8px;font-size:12px;color:var(--sub);display:flex;flex-wrap:wrap;gap:2px 10px}
 .dlock{background:#17181e;border:1px dashed var(--line);border-radius:8px;padding:6px 9px;margin-bottom:6px;font-size:12px;color:var(--sub)}
@@ -231,6 +234,7 @@ const DIARY_MAX = 600;         // 保存する記録の上限(古い順に消え
 const COST_TABLE_ORIGINAL = {memo:MEMO_COST, redact:null, diary:DIARY_COST};
 const SPEEDS = [0, 1, 5, 20, 60];        // ゲーム内の分 / 実時間1秒
 const OFFLINE_CAP = 7 * 24 * 60;
+const RETURN_MIN_GAME_MINUTES = 240;   // 留守中のゲーム内経過がこれ未満なら復帰画面は出さない(PPはログにだけ残す)
 // 生理休暇: ゲーム内日付から決定的に計算(28日周期のうち5日。ランダムなし、セーブに新フィールド不要)
 const HOLIDAY_CYCLE = 28;
 const HOLIDAY_DAYS = 5;
@@ -617,7 +621,8 @@ function load(){
   catch(e){ console.error(e); try{ if(raw) localStorage.setItem(SAVE_KEY+"_broken_"+Date.now(),raw); }catch(_){} }   // 読み込みに失敗したセーブは消さずに別名で退避
   return defState();
 }
-function save(){S.last=Date.now(); try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
+// S.last は「ゲームの進行が追いついている実時刻」。非表示中は描画ループが止まるので更新しない(裏で定期保存が動いても留守中の進行が消えないように)
+function save(){ if(!document.hidden) S.last=Date.now(); try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
 
 // ---------- utilities ----------
 function R(){return Math.random();}
@@ -638,7 +643,7 @@ const shortName = n=>String(n).replace(/ #\d+.*$/,"");
 
 function log(msg,cls=""){
   S.log.push({t:S.t,m:msg,c:cls}); if(S.log.length>250) S.log.splice(0,S.log.length-250);
-  if(offSum && cls) offSum.ev++;
+  if(offSum && cls==="ev") offSum.ev++;   // 出来事(イベント・節目)の件数
 }
 function setSt(st,dur=0){S.st=st;S.stEnd=S.t+dur;}
 function rankBonus(){return RANKS[S.rank].bonus;}
@@ -703,7 +708,9 @@ function newDay(wd){
   if(hol){   // 休養効果のみ。許容度や体調への悪影響・揺れはなし
     c.loose=clamp(c.loose-HOLIDAY_REC.loose,0,100); c.numb=clamp(c.numb-HOLIDAY_REC.numb,0,100); c.risk=clamp(c.risk-HOLIDAY_REC.risk,0,100);
     S.reports.unshift({day:S.day.n,date:dateStr(S.day.n),holiday:true}); if(S.reports.length>30) S.reports.pop();
+    if(offSum){ offSum.rep++; offSum.hol++; }
   }
+  if(offSum && S.isOff && !hol) offSum.off++;
   if(S.isOff) S.streak=0;
   if(S.days>=7) grant("week");
 }
@@ -1106,7 +1113,7 @@ function endShift(early){
     rate:d.ratings.length?avg(d.ratings):0,hp:Math.round(S.hp),mp:Math.round(S.mp),weather:S.weather,early,ev:d.ev.slice(0,4),goal:S.goal,goalHit:d.goalHit,rank:RANKS[S.rank].n,
     tol:r1(S.ch.tol),effMax:r1(d.effMax),bad:d.bad,lines:h.lines,red:h.red};
   S.reports.unshift(rep); if(S.reports.length>30) S.reports.pop();
-  S.repTotal=(S.repTotal||0)+1;
+  S.repTotal=(S.repTotal||0)+1; if(offSum) offSum.rep++;
   if(S.repTotal%PP_REPORT_EVERY===0) ppAdd(PP_REWARD.reports,`日報${S.repTotal}日分`);
   log(`🔴 退勤 本日 ${d.count}件 / ${yen(d.sales)}${early?" (早退)":""}`,"sy");
   // 境界線のゆるみ: 閾値を超えると「誰にでも許す」状態になり得る(素質型なので起きにくい)
@@ -1446,27 +1453,48 @@ function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;","
 
 // ---------- offline progress ----------
 let ppAway=0;
+function fmtReal(sec){ const d=Math.floor(sec/86400), h=Math.floor(sec%86400/3600), m=Math.floor(sec%3600/60); return (d?d+"日":"")+(d||h?h+"時間":"")+m+"分"; }
 function offline(){
   ppAway=ppAccrue();
-  const sec=(Date.now()-(S.last||Date.now()))/1000;
-  const sp=S.speed||1;
-  const mins=Math.min(OFFLINE_CAP,Math.floor(sec*sp));
-  if(mins<5){ if(ppAway>0){ log(`${PP_ICON} 留守中に ${PP_NAME} +${ppAway}`,"gd"); modal("🕰️ おかえりなさい",`<div>留守中に ${PP_ICON} <b>${PP_NAME} +${ppAway}</b> (現在 ${S.pp})</div>`);} return; }
-  const before={pp:S.pp-ppAway,money:S.money,total:S.total,days:S.days,rank:S.rank,reg:Object.keys(S.regs).length,tol:S.ch.tol};
-  offSum={ev:0};
+  const sec=Math.max(0,(Date.now()-(S.last||Date.now()))/1000);
+  const sp=S.speed||0;                       // 一時停止(0)のまま閉じたら、留守中も進めない(PPは実時間ベースなので別)
+  const want=Math.floor(sec*sp), mins=Math.min(OFFLINE_CAP,want), capped=want>OFFLINE_CAP;
+  const ppLine=`${PP_ICON} 留守中に ${PP_NAME} +${ppAway}`;
+  if(mins<RETURN_MIN_GAME_MINUTES){
+    if(mins>0) for(let i=0;i<mins;i++) step();
+    if(ppAway>0) log(ppLine,"gd");
+    if(sp===0 && sec>=3600 && ppAway>0) modal("🕰️ おかえりなさい",`<div>一時停止中だったので、ゲームは進めていません(離れていた時間 ${fmtReal(sec)})。</div><div style="margin-top:6px">${PP_ICON} <b>${PP_NAME} +${ppAway}</b> (現在 ${S.pp}) ※${PP_NAME}は実時間で貯まります</div>`);
+    return;
+  }
+  const before={pp:S.pp-ppAway,money:S.money,sales:S.totalSales,total:S.total,days:S.days,rank:S.rank,reg:Object.keys(S.regs).length,tol:S.ch.tol,
+    hp:S.hp,mp:S.mp,safe:100-S.ch.risk,diary:S.diaryNo||0};
+  offSum={ev:0,rep:0,hol:0,off:0};
   for(let i=0;i<mins;i++) step();
-  offSum=null;
+  const o=offSum; offSum=null;
+  const sales=S.totalSales-before.sales, net=S.money-before.money, spend=Math.max(0,sales-net);
+  const sg=v=>(v>=0?"+":"")+v, fr=(a,b)=>`${Math.round(a)} → ${Math.round(b)}`;
   log(`🕰️ 留守中に ${Math.floor(mins/60)}時間${mins%60}分 経過しました`,"sy");
-  modal("🕰️ おかえりなさい",`<div>留守中にゲーム内で <b>${Math.floor(mins/60)}時間${mins%60}分</b> が経過しました${mins>=OFFLINE_CAP?"(上限7日)":""}。</div>
-   <table style="width:100%;margin-top:8px">
-   <tr><td>接客数</td><td style="text-align:right">+${S.total-before.total}件</td></tr>
-   <tr><td>貯金</td><td style="text-align:right">${S.money-before.money>=0?"+":""}${yen(S.money-before.money)}</td></tr>
-   <tr><td>新しい常連</td><td style="text-align:right">+${Object.keys(S.regs).length-before.reg}人</td></tr>
-   <tr><td>${PP_ICON} ${PP_NAME} (放置ぶん)</td><td style="text-align:right">+${ppAway}${S.pp>=PP_CAP?" (上限)":""}</td></tr>
-   <tr><td>${PP_ICON} ${PP_NAME} (節目の報酬)</td><td style="text-align:right">+${Math.max(0,S.pp-before.pp-ppAway)} → 現在 ${S.pp}</td></tr>
-   <tr><td>許容度</td><td style="text-align:right">${before.tol.toFixed(1)} → ${S.ch.tol.toFixed(1)}</td></tr>
-   <tr><td>経過日数</td><td style="text-align:right">+${S.days-before.days}日</td></tr>
-   ${S.rank>before.rank?`<tr><td>ランク</td><td style="text-align:right">⭐ ${RANKS[S.rank].n}</td></tr>`:""}
+  const row=(k,v)=>`<tr><td>${k}</td><td class="r">${v}</td></tr>`;
+  modal("🕰️ おかえりなさい",`<div>留守中にゲーム内で <b>${Math.floor(mins/60)}時間${mins%60}分</b>(${(mins/1440).toFixed(1)}日ぶん)が経過しました。</div>
+   ${capped?`<div class="small" style="margin-top:4px">実際に離れていた時間: <b>${fmtReal(sec)}</b>(${sp}倍速)。上限7日ぶんまで進めました。それ以上は進みません。</div>`:`<div class="small" style="margin-top:4px">実際に離れていた時間: ${fmtReal(sec)}(${sp}倍速)</div>`}
+   <table class="otab">
+   ${row("経過日数",`+${S.days-before.days}日`)}
+   ${row("休んだ日",`お休み ${o.hol}日 / 定休日など ${o.off}日`)}
+   ${row("接客数",`+${S.total-before.total}件`)}
+   ${row("売上(出費前)",`+${yen(sales)}`)}
+   ${row("出費",spend?`-${yen(spend)}`:yen(0))}
+   ${row("貯金の増減",`${net>=0?"+":"-"}${yen(Math.abs(net))} → ${yen(S.money)}`)}
+   ${row("日報",`+${o.rep}件`)}
+   ${row("プレイ日記",`+${(S.diaryNo||0)-before.diary}件`)}
+   ${row("新しい常連",`+${Object.keys(S.regs).length-before.reg}人`)}
+   ${row("体力",fr(before.hp,S.hp))}
+   ${row("メンタル",fr(before.mp,S.mp))}
+   ${row("安全度",fr(before.safe,100-S.ch.risk))}
+   ${row("許容度",`${before.tol.toFixed(1)} → ${S.ch.tol.toFixed(1)}`)}
+   ${row("出来事",`${o.ev}件`)}
+   ${row(`${PP_ICON} ${PP_NAME}(放置ぶん)`,`+${ppAway}${S.pp>=PP_CAP&&ppAway===0?"(上限)":""}`)}
+   ${row(`${PP_ICON} ${PP_NAME}(節目の報酬)`,`+${Math.max(0,S.pp-before.pp-ppAway)} → 現在 ${S.pp}`)}
+   ${S.rank>before.rank?row("ランク",`⭐ ${RANKS[S.rank].n}`):""}
    </table><div class="small" style="margin-top:6px">詳しくはイベントログと日報をどうぞ。</div>`);
 }
 
@@ -1507,8 +1535,9 @@ function newGamePlus(){
 $("ngBtn").onclick=()=>{ if(confirm("最初からプレイしますか?\nひよりの進行(時間・ステータス・貯金・ランク・常連・日報・日記の記録・実績など)は初期化されます。\nPPと、解放済みの伏せ字・メモ・日記の章、名場面は引き継がれます。")) newGamePlus(); };
 $("resetBtn").onclick=()=>{ if(confirm("全データを削除しますか?\nPP・解放状態・名場面も含めて、すべて消えます。元に戻せません。")){localStorage.removeItem(SAVE_KEY);S=defState();lastLogLen=-1;lastRep="";lastMemo="";lastDiary="";$("reports").innerHTML='<div class="small">まだ日報はありません。</div>';intro();render(true);} };
 function intro(){ if(!S.log.length){ log("🌙 観察を始めます。ひより(22)は昼は専門学校生、夜はお店に在籍して留学資金を貯めている。","sy"); log("💡 右上で時間の速さを変えられます。基本は眺めるだけでOK。","sy"); } }
-document.addEventListener("visibilitychange",()=>{ if(document.hidden) save(); else { offline(); render(true);} });
+document.addEventListener("visibilitychange",()=>{ if(document.hidden){ S.last=Date.now(); save(); } else { offline(); render(true); save(); } });
 window.addEventListener("beforeunload",save);
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && document.getElementById("modal").style.display==="flex") closeModal(); });
 setInterval(save,10000);
 intro(); offline(); render(true); save();
 requestAnimationFrame(loop);
