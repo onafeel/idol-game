@@ -255,6 +255,44 @@ const RANKS = [
   {n:"新人",need:0,r:0,bonus:0},{n:"レギュラー",need:15,r:3.6,bonus:.03},{n:"人気キャスト",need:50,r:3.9,bonus:.06},
   {n:"上位キャスト",need:120,r:4.1,bonus:.09},{n:"ランキング常連",need:250,r:4.3,bonus:.12},{n:"トップキャスト",need:450,r:4.5,bonus:.15}
 ];
+// ---------- 予約の設計(キャラ別。将来ほかのキャラや出勤パターンを足すときは CHAR_BOOKING に1件追加する) ----------
+// 1) 出勤日の最初の待機で「今日の予約表」S.plan を作る。枠は slotsPerDay まで(有限)。
+//    ① 次回予定日 g.next を過ぎた常連を、予定日の古い順に枠へ(同じ客は minGap 日以内には入れない)。
+//       取れなかった常連は予定日のまま翌出勤日以降へ繰り延べ(休暇・定休日明けは自然に混む)。giveUpDays 過ぎたら今回は見送り。
+//    ② 残りの枠を新規リクエスト(1出勤日あたり ポアソン(newDemand))で埋める。新規は余っても持ち越さない(有限の流れ)。
+//    ③ 予約ごとに開始の目安時刻を planWindow 内に割り振り、待機中にその時刻が来たら接客へ。
+//    常連+新規のリクエストが枠以上で、全枠をこなした日は「完売」。
+// 2) 常連のペース: 常連化時に基本間隔 iv(日) を ivDist から抽選。通い始めは heatVisits 回だけ間隔×heatMul(熱の時期)。
+//    毎回 ±ivJitter、本気度・信頼で短縮、離れかけ(🍂)・壁で延長。給料日(payday.days)は予定日が近ければ前倒し。
+// 3) 新規の流れ: newBase × 新人ボーナス(rookieDays まで満額、その後 rookieFade 日で減衰) × 曜日の客足 × 評価 × 全体許容度 × ランク × 噂。
+// 4) 常連の自然な離脱: 毎日 churn.base の確率(深い相手は deepK 倍)、長く来ていない(iv×longAbsentK 日)と longAbsentP 上乗せ。
+const CHAR_BOOKING = {
+  hiyori:{
+    slotsPerDay:4,                       // 出勤18時〜3時(約540分) ÷ 1件あたり約2時間(移動〜22分+平均77分+戻り〜20分) ≒ 4.5 → 最大4枠
+    shiftPattern:{offWeekday:[3]},       // 定休日の曜日(0=日)。生理休暇・休日・休養は別の仕組み
+    planWindow:[18*60+10, 24*60+50],     // 予約開始の目安を割り振る時間帯(分。24時以降は翌日)
+    rookieDays:35, rookieBonus:3.2, rookieFade:25,
+    newBase:0.75,                        // 新規リクエストの基本数(1出勤日あたり)
+    ivDist:[[.03,5,7],[.05,8,10],[.14,12,18],[.36,23,36],[.42,40,100]],   // 個人の来店間隔 [割合, 最短日, 最長日]
+    ivJitter:.2, heatVisits:[2,4], heatMul:[.35,.5], loveShorten:.15, trustShorten:.05,
+    newReserve:1,                        // 新規(フリー)のために空けておく枠。新規の申し込みがある日は常連はこれを除いた枠まで
+    driftLonger:1.35, wallLonger:1.8, minGap:3, giveUpDays:21,
+    payday:{on:true, days:[25,26,27,28], pull:3},
+    churn:{base:.022, longAbsentK:3, longAbsentP:.03, deepK:.3}
+  }
+};
+const BKC = ()=>CHAR_BOOKING.hiyori;
+// 一度きりの客: 新規のうち、二度と予約を入れない人の割合(目安)。その夜の評価(ひよりの調子・許容度・雰囲気・信頼の結果)で少しだけ動く
+const ONE_TIME_RATE = 0.5;
+const RETURN_SAT_K = 0.12;         // 評価★1つぶんで再来の確率がこれだけ動く(弱い連動)
+const RETURN_TYPE_K = {bad:.5, wall:.6};   // 苦手なお客さん・壁にぶつかった客は再来しにくい
+function returnChance(r,type,vibe){
+  let p=(1-ONE_TIME_RATE)+RETURN_SAT_K*(r-3.9);
+  if(type==="bad") p*=RETURN_TYPE_K.bad;
+  if(vibe==="wall"||vibe==="rude") p*=RETURN_TYPE_K.wall;
+  return clamp(p,.1,.9);
+}     // いまはひよりのみ(複数キャラ対応時はキャラIDで引く)
+const SOLDOUT_LINES = ["📅 今日は予約がいっぱいだった","📅 気づけば、今日の枠は全部埋まっていた","📅 受付で「本日は満員です」という声が聞こえた","📅 今夜は、待機室に戻る暇がほとんどなかった"];
 const COURSES = [{m:60,p:16000},{m:90,p:23000},{m:120,p:30000}];
 const BADGES = [
   ["first","🔰","はじめての出勤"],["s10","🎯","通算10件"],["s100","💯","通算100件"],["reg1","🤝","初めての常連"],
@@ -421,7 +459,7 @@ const REL_MIN_TOL = 2.5;     // 新規への「雰囲気が良ければ許す」
 const NEW_MAX_TOL = 4.4;     // 新規・常連(特別以外)で届く上限=Lv4
 // 序盤のイレギュラー: 全体許容度が低い時期でも、雰囲気が良く気遣いのある新規客に限り、ごく低確率でその夜だけLv4
 const IRREG_LV4_P = 0.04;
-// 一度Lv4を許した客(イレギュラーを除く到達点が4.0以上)は、以降ほぼ毎回Lv4以上
+// 一度Lv4を許した客(イレギュラー⚡で届いた到達点も含めて4.0以上)は、以降ほぼ毎回Lv4以上
 // 日記1行目の頭に付ける記号(絵文字のみ)。基本はすべての夜、過剰はLv4以上(切り捨て)
 const PLAY_MARKS_BASE = ['💋','✋️'];
 const PLAY_MARK_LV4 = '❤️';
@@ -547,6 +585,9 @@ function migrate(d){
   s.cd=Object.assign({rest:0,food:0,msg:0,off:0,push:0,stop:0,check:0,lowkey:0},d.cd||{});
   s.shop=Object.assign({heat:0,lowKeyUntil:0},d.shop||{});
   if(typeof s.rumor!=="number"||!isFinite(s.rumor)) s.rumor=0;
+  // 予約の仕組み変更: 既存の常連に個人の間隔と次回予定日を割り当てる
+  { const dn=Math.floor((s.t||0)/1440); for(const id in s.regs){ const g=s.regs[id]; if(g && !g.iv){ g.iv=pickIv(); g.heat=0; g.next=dn+1+Math.floor(R()*g.iv); } } }
+  if(s.plan && typeof s.plan!=="object") s.plan=null;
   s.rumorN=Object.assign({fromNew:0,fromReg:0,hint:0,mis:0,wall:0,newCust:0},d.rumorN||{});
   if(!Array.isArray(s.carryRed)) s.carryRed=[];
   // 旧版で保存された「店の黙認に触れる一文」は、既存セーブからも取り除く
@@ -665,6 +706,7 @@ function step(){
   // 状態ごとの消耗/回復 [体力, メンタル]。ひよりは素質型なので、通常の勤務ではメンタルがほとんど減らない
   const d={sleep:[.22,.08],off:[.02,.05],dayoff:[.05,.1],prep:[0,0],wait:[-.02,-.004],move:[-.05,-.005],work:[-.11,-.01],back:[-.05,-.003],rest:[.15,.12],home:[-.02,0]}[st]||[0,0];
   const hm_=(holidayNow()&&(st==='sleep'||st==='dayoff'))?HOLIDAY_REST_MULT:1;
+  if(st==="wait") S.day.waitMin=(S.day.waitMin||0)+1;
   S.hp=clamp(S.hp+d[0]*hm_,0,100); S.mp=clamp(S.mp+d[1]*hm_*(S.weather==="雨"&&st!=="sleep"&&d[1]>0?.6:1),0,100);
 
   switch(st){
@@ -694,7 +736,7 @@ function newDay(wd){
   rumorDaily();
   S.sickToday = S.sickDays>0;
   const hol=isHoliday(dayNo(S.t));
-  S.isOff = S.offTomorrow || wd===3 || S.sickDays>0 || hol; S.offTomorrow=false;
+  S.isOff = S.offTomorrow || BKC().shiftPattern.offWeekday.includes(wd) || S.sickDays>0 || hol; S.offTomorrow=false;
   if(S.sickDays>0){ S.sickDays--; log(`🏥 体調不良のため休養中${S.sickDays>0?`(あと${S.sickDays}日)`:"(明日から復帰予定)"}`,"bd"); }
   S.weather = R()<.22?"雨":(R()<.3?"くもり":"晴れ");
   S.demand = (wd===5||wd===6?1.35:wd===0?1.1:1) * (S.weather==="雨"?.8:1);
@@ -732,31 +774,71 @@ function startShift(){
   log(`🟢 出勤しました (${S.weather==="雨"?"☔ 雨":S.weather})${S.streak>=3?` 連続${S.streak}日目`:""}`,"gd");
   grant("first"); if(S.weather==="雨") grant("rain");
 }
+function poisson(l){ const L=Math.exp(-l); let k=0,p=1; do{ k++; p*=R(); }while(p>L && k<50); return k-1; }
+// 読み込み時の移行からも呼ぶので、後で定義される ri ではなく R だけを使う
+function pickIv(){ const B=BKC(), rr=(lo,hi)=>lo+Math.floor(R()*(hi-lo+1)); let x=R(),a=0; for(const [w,lo,hi] of B.ivDist){ a+=w; if(x<a) return rr(lo,hi); } const l=B.ivDist[B.ivDist.length-1]; return rr(l[1],l[2]); }
+// 常連化したとき: 個人の基本間隔と、通い始めの熱の回数を決める
+function regInit(g,d){ const B=BKC(); g.iv=pickIv(); g.heat=ri(...B.heatVisits); g.next=d+Math.max(B.minGap,Math.round(g.iv*rf(...B.heatMul))); }
+// 来店のあと: 次回予定日
+function regNext(id,g,d){
+  const B=BKC(); if(!g.iv) g.iv=pickIv();
+  let v=g.iv*(1-B.loveShorten*(g.love||0)/100-B.trustShorten*(g.trust||0)/100)*rf(1-B.ivJitter,1+B.ivJitter);
+  if(g.heat>0){ v*=rf(...B.heatMul); g.heat--; }
+  const x=S.cust[id]; if(g.wall) v*=B.wallLonger; else if(x && custCur(id,x)<(x.pn??x.pk)-.3) v*=B.driftLonger;
+  g.next=d+Math.max(B.minGap,Math.round(v));
+}
+function rookieMul(){ const B=BKC(), d=S.days; return 1+B.rookieBonus*(d<=B.rookieDays?1:Math.exp(-(d-B.rookieDays)/B.rookieFade)); }
+function newDemand(){ return BKC().newBase*rookieMul()*S.demand*(0.7+ratingAvg()/10)*(1+S.ch.tol*.04)*(1+S.rank*.1)*(1+RUMOR_DEMAND*(S.rumor||0)/100); }
+function buildPlan(){
+  const B=BKC(), d=S.day.n, slots=B.slotsPerDay, P={day:d,slots,q:[],reqReg:0,reqNew:0,full:false,served:0};
+  const md=new Date(2026,0,4+d).getDate(), pay=B.payday.on && B.payday.days.includes(md);
+  const due=[];
+  for(const id in S.regs){ const g=S.regs[id]; if(g.next==null) continue;
+    if(d-g.next>B.giveUpDays){ g.next=d+Math.round(g.iv*rf(.5,1)); continue; }       // 長く取れなかったら、今回は見送り
+    const x=S.cust[id]; if(x && x.last!=null && d-x.last<B.minGap) continue;
+    if(g.next<=d+(pay?B.payday.pull:0)) due.push(id); }
+  due.sort((a,b)=>S.regs[a].next-S.regs[b].next);
+  P.reqReg=due.length;
+  const nNew=poisson(newDemand()); P.reqNew=nNew;
+  const regCap = nNew>0 ? Math.max(0,slots-Math.min(B.newReserve,nNew)) : slots;
+  for(const id of due.slice(0,regCap)) P.q.push({reg:id});
+  for(let i=0;i<nNew && P.q.length<slots;i++) P.q.push({nw:1});
+  P.full = P.reqReg+nNew>=slots;
+  for(let i=P.q.length-1;i>0;i--){ const j=ri(0,i); [P.q[i],P.q[j]]=[P.q[j],P.q[i]]; }
+  const [a,b]=B.planWindow, base=d*1440, n=Math.max(1,P.q.length);
+  P.q.forEach((e,i)=>{ e.at=base+a+Math.round((b-a)*(i+rf(.05,.95))/n); });
+  S.plan=P;
+}
 function waitTick(m,wd){
-  const h=Math.floor(m/60);
-  const tm = h>=20&&h<=24||h===0 ? 1.4 : h>=1&&h<3 ? .9 : .8;
-  const rk = 1+S.rank*.15;
-  const p = .016*tm*rk*S.demand*(0.7+ratingAvg()/10)*(1+S.ch.tol*.04)*(1+RUMOR_DEMAND*(S.rumor||0)/100);
-  if(R()<p) newBooking(false);
-  else checkTired();
+  if(!S.plan || S.plan.day!==S.day.n) buildPlan();
+  const P=S.plan, e=P.q[0];
+  if(e && S.t>=e.at){
+    P.q.shift();
+    if(e.reg){ if(S.regs[e.reg]){ P.served++; newBooking(e.reg); return; } }   // 離脱済みなら枠は空く
+    else { P.served++; newBooking(false); return; }
+  }
+  checkTired();
+}
+// 直接予約のイベント: 枠が空いていれば、予定日が近い常連を前倒しで
+function directReg(){
+  const P=S.plan, B=BKC(), d=S.day.n; if(!P || P.served+P.q.length>=P.slots) return null;
+  const inQ=new Set(P.q.map(e=>e.reg).filter(Boolean));
+  const ids=Object.keys(S.regs).filter(id=>{ const x=S.cust[id], g=S.regs[id]; return !inQ.has(id) && !(x && x.last!=null && d-x.last<B.minGap) && g.next!=null && g.next<=d+5; })
+    .sort((a,b)=>S.regs[a].next-S.regs[b].next);
+  return ids[0]||null;
 }
 function pickType(){
   let x=R(), acc=0;
   for(const k in CTYPES){acc+=CTYPES[k].w; if(x<acc) return k;}
   return "kind";
 }
-function newBooking(forceReg){
-  const regIds=Object.keys(S.regs);
-  let reg = forceReg || (regIds.length && R()< Math.min(.65,.15+regIds.length*.04));
-  let name, id, type, tol;
-  if(reg && regIds.length){
-    // 本気度が高い常連ほど予約しやすい
-    const ws=regIds.map(i=>1+(S.regs[i].love||0)/25), tot=ws.reduce((a,b)=>a+b,0);
-    let x=R()*tot; id=regIds[regIds.length-1];
-    for(let i=0;i<regIds.length;i++){x-=ws[i]; if(x<=0){id=regIds[i];break;}}
-    const g=S.regs[id]; name=g.name; type=g.type; tol=g.tol;
+function newBooking(regId){
+  let name, id, type, tol, reg=false;
+  if(regId===true) regId=directReg();
+  if(regId && S.regs[regId]){
+    reg=true; id=regId; const g=S.regs[id]; name=g.name; type=g.type; tol=g.tol;
   } else {
-    reg=false; id="c"+(S.nextCust++); type=pickType();
+    id="c"+(S.nextCust++); type=pickType();
     name=String.fromCharCode(65+ri(0,25))+"様 #"+id.slice(1)+"(新規)";
     tol=rf(...CTYPES[type].tol0);
     S.rumorN.newCust++;
@@ -803,7 +885,7 @@ function finishWork(){
   // Lv4経験のある客: 全体の許容度や調子が低くても、ほぼ毎回Lv4以上(デリカシーのない夜・苦手なお客さんは対象外)
   let lv4rep=null;
   { const xc=S.cust[c.id];
-    if(xc && (xc.pn??(xc.irr!=null?0:xc.pk))>=LV4_REPEAT_MIN && type!=="bad" && vibe!=="rude" && vibe!=="irreg" && vibe!=="wall"){
+    if(xc && Math.max(xc.pk||0,xc.pn||0)>=LV4_REPEAT_MIN && type!=="bad" && vibe!=="rude" && vibe!=="irreg" && vibe!=="wall"){
       if(R()<LV4_REPEAT_P){ lv4rep="fix"; eff=Math.max(eff,rf(LV4_REPEAT_MIN,NEW_MAX_TOL)); } else lv4rep="miss";
     } }
   if(type==="bad") eff=Math.min(eff,1);   // 生理的に無理な客は常に0〜1
@@ -884,10 +966,12 @@ function finishWork(){
     if(vibe==="wall"||vibe==="rude"){ g.wall=true; g.tol=Math.max(0,bt-.45); g.love=Math.max(0,g.love-6); g.trust=Math.max(0,g.trust-5); }   // 壁にぶつかると、その客への許容度は下がり離れていく   // 雰囲気で許した分は、その人への許容度として残る
     if(Math.floor(g.tol)>Math.floor(bt)) log(`🔓 ${shortName(g.name)}への許容度が ${Math.floor(g.tol)} に上がった`,"ev");
     if(g.trust>=80) grant("trust80");
+    regNext(c.id,g,dayNo(S.t));
     S.day.regs[c.id]=(S.day.regs[c.id]||0)+1;
-  } else if(type!=="bad" && r>=4 && R()<.35){
+  } else if(R()<returnChance(r,type,vibe)){   // 再来する人は常連(次回予定日あり)に。しない人は一度きりで、二度と予約が入らない
     S.regs[c.id]={name:c.name.replace("(新規)","(常連)"),visits:1,type,tol:clamp((vibe==="irreg"?custTol:Math.max(custTol,eff))+.1,0,ty.tolMax),trust:ri(8,16),love:ri(3,10)};
     if(vibe==="wall"||vibe==="rude"){ const ng=S.regs[c.id]; ng.wall=true; ng.tol=Math.min(ng.tol,Math.max(0,eff-.3)); }
+    regInit(S.regs[c.id],dayNo(S.t));
     log(`🤝 ${c.name.replace("(新規)","")} がリピーターになった (${ty.l})`,"gd");
     S.day.regs[c.id]=1;
   }
@@ -905,6 +989,7 @@ function finishWork(){
       else if(R()<RUMOR_REG_P){ const a=base*RUMOR_REG_K*room; S.rumor=clamp((S.rumor||0)+a,0,100); S.rumorN.fromReg+=a; } } }
   addDiary(c,type,g,eff,r,rsn,pre,rel,vibe,lv4rep);
   updateCust(c,type,eff,vibe);
+  if(!g){ S.bkN=S.bkN||{nw:0,ret:0}; S.bkN.nw++; if(S.regs[c.id]) S.bkN.ret++; else if(S.cust[c.id]) S.cust[c.id].once=true; }
   S.cur=null; setSt("back",ri(15,25));
   checkBadges(); checkRank();
   if(S.goal && !S.day.goalHit && S.day.sales>=S.goal){ S.day.goalHit=true; S.mp=clamp(S.mp+12,0,100); log(`🏁 本日の目標 ${yen(S.goal)} 達成!`,"gd"); grant("goal"); }
@@ -937,8 +1022,16 @@ function custCum(){ const n=custCounts(), c=[0,0,0,0,0,0]; for(let L=5,a=0;L>=0;
 function custDaily(){
   const d=dayNo(S.t);
   for(const id in S.regs){ const g=S.regs[id], x=S.cust[id]; if(!x||x.last==null) continue;
-    if(!isHoliday(d) && workDaysBetween(x.last,d,12)>12){ g.tol=Math.max(0,g.tol-.04); g.love=Math.max(0,g.love-.3); } }
+    const lim=Math.max(12,Math.round((g.iv||20)*1.6));
+    if(!isHoliday(d) && workDaysBetween(x.last,d,lim)>lim){ g.tol=Math.max(0,g.tol-.04); g.love=Math.max(0,g.love-.3); } }
   for(const id in S.regs){ const x=S.cust[id]; if(x) custPeak(id,x,d); }
+  // 常連の自然な離脱(個人事情・長期不来店)。人数が増え続けないように
+  const C=BKC().churn;
+  for(const id of Object.keys(S.regs)){ const g=S.regs[id], x=S.cust[id];
+    const absent=x&&x.last!=null?d-x.last:0, deep=relOf(g)==="deep";
+    const p=C.base*(deep?C.deepK:1)+(absent>(g.iv||30)*C.longAbsentK?C.longAbsentP:0);
+    if((g.visits||1)>=2 && R()<p){ delete S.regs[id];   // 再来を決めた人は、少なくとも2回目までは来る
+      if(x) x.gone=d; S.regGone=(S.regGone||0)+1; } }
   S.custPrev=custCum(); S.custPrevCum=true;
 }
 
@@ -1111,7 +1204,8 @@ function endShift(early){
   const h=makeHitokoto(d);
   const rep={day:d.n,date:dateStr(d.n),hours:d.start?Math.round((S.t-d.start)/6)/10:0,count:d.count,nom:d.nom,sales:d.sales,
     rate:d.ratings.length?avg(d.ratings):0,hp:Math.round(S.hp),mp:Math.round(S.mp),weather:S.weather,early,ev:d.ev.slice(0,4),goal:S.goal,goalHit:d.goalHit,rank:RANKS[S.rank].n,
-    tol:r1(S.ch.tol),effMax:r1(d.effMax),bad:d.bad,lines:h.lines,red:h.red};
+    tol:r1(S.ch.tol),effMax:r1(d.effMax),bad:d.bad,lines:h.lines,red:h.red,wait:Math.round((d.waitMin||0)/6)/10,full:!!(S.plan&&S.plan.day===d.n&&S.plan.full&&S.plan.served>=S.plan.slots&&!early)};
+  if(rep.full){ log(pick(SOLDOUT_LINES),"ev"); S.soldDays=(S.soldDays||0)+1; }
   S.reports.unshift(rep); if(S.reports.length>30) S.reports.pop();
   S.repTotal=(S.repTotal||0)+1; if(offSum) offSum.rep++;
   if(S.repTotal%PP_REPORT_EVERY===0) ppAdd(PP_REWARD.reports,`日報${S.repTotal}日分`);
@@ -1162,7 +1256,7 @@ function randomEvent(){
   const working = S.st==="wait";
   const evs = working ? [
     ["☔ 急に雨が降り出した。移動に時間がかかりそう",()=>{S.weather="雨";S.demand*=.85;}],
-    ["🔁 常連さんから直接予約!",()=>{ if(Object.keys(S.regs).length) newBooking(true); else S.mp+=3; }],
+    ["🔁 常連さんから直接予約!",()=>{ const id=directReg(); if(id){ S.plan.served++; newBooking(id); } else S.mp+=3; }],
     ["🤒 少し体調が悪い…",()=>{S.hp-=15;S.mp-=4;}],
     ["📝 サイトに嬉しい口コミが載った",()=>{S.mp+=10;S.demand*=1.1;}],
     ["👔 店長に最近の頑張りを褒められた",()=>{S.mp+=8;}],
@@ -1345,8 +1439,8 @@ function render(force){
   const rk=S.reports.length+":"+(S.reports[0]?S.reports[0].day:"")+":"+S.reports.map(r=>redOpen(r.red)?1:0).join("")+":"+S.scenes.length+":"+S.pp;
   if(force||rk!==lastRep){
     lastRep=rk;
-    if(S.reports.length) $("reports").innerHTML=S.reports.map((r,ix)=>r.holiday?`<div class="rep"><b>📋 ${r.date} の日報</b> <span class="small">お休み</span></div>`:`<div class="rep"><b>📋 ${r.date} の日報</b> ${r.early?"<span class='bd'>(早退)</span>":""}<span class="small"> ${r.weather} / ${r.rank}</span>
-      <table><tr><td>勤務時間</td><td>${r.hours}h</td></tr><tr><td>接客数 / 指名</td><td>${r.count}件 / ${r.nom}件</td></tr>
+    if(S.reports.length) $("reports").innerHTML=S.reports.map((r,ix)=>r.holiday?`<div class="rep"><b>📋 ${r.date} の日報</b> <span class="small">お休み</span></div>`:`<div class="rep"><b>📋 ${r.date} の日報</b> ${r.full?"<span class='tag'>🈵 完売</span>":""}${r.early?"<span class='bd'>(早退)</span>":""}<span class="small"> ${r.weather} / ${r.rank}</span>
+      <table><tr><td>勤務時間</td><td>${r.hours}h${r.wait!=null?` (待機 ${r.wait}h)`:""}</td></tr><tr><td>接客数 / 指名</td><td>${r.count}件 / ${r.nom}件</td></tr>
       <tr><td>売上(手取り)</td><td>${yen(r.sales)}</td></tr><tr><td>平均評価</td><td>${r.rate?"★"+r.rate.toFixed(2):"-"}</td></tr>
       <tr><td>退勤時 体力 / メンタル</td><td>${r.hp} / ${r.mp}</td></tr>${r.tol!=null?`<tr><td>許容度 (本日最大 / 全体)</td><td>${r.effMax.toFixed(1)} / ${r.tol.toFixed(1)}</td></tr>`:""}${r.bad?`<tr><td>苦手なお客さん</td><td>${r.bad}件</td></tr>`:""}${r.goal?`<tr><td>目標 ${yen(r.goal)}</td><td>${r.goalHit?"✅ 達成":"未達"}</td></tr>`:""}</table>
       ${(r.lines||[]).map((l,li)=>{const saved=S.scenes.some(s=>s.tx===l.tx&&s.date===r.date);return `<div class="hito t-${l.tone}"><span class="tx">「${esc(l.tx)}」 <span class="tag">${TONE_L[l.tone]||""}</span></span><button data-sc="${ix}:${li}" title="名場面に保存" ${saved?"disabled":""}>${saved?"★":"☆"}</button></div>`;}).join("")}
@@ -1486,7 +1580,7 @@ function offline(){
    ${row("貯金の増減",`${net>=0?"+":"-"}${yen(Math.abs(net))} → ${yen(S.money)}`)}
    ${row("日報",`+${o.rep}件`)}
    ${row("プレイ日記",`+${(S.diaryNo||0)-before.diary}件`)}
-   ${row("新しい常連",`+${Object.keys(S.regs).length-before.reg}人`)}
+   ${row("常連の人数",`${before.reg} → ${Object.keys(S.regs).length}人`)}
    ${row("体力",fr(before.hp,S.hp))}
    ${row("メンタル",fr(before.mp,S.mp))}
    ${row("安全度",fr(before.safe,100-S.ch.risk))}
