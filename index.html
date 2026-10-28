@@ -36,7 +36,18 @@ main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1.2fr);ga
 .stat .k{font-size:11px;color:var(--sub)}
 .stat .v{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums}
 .acts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.acts button{padding:9px 6px;text-align:left}
+.acts button{padding:9px 6px;text-align:left;position:relative;touch-action:manipulation;transition:transform .08s,opacity .2s;overflow:visible}
+.acts button:active{transform:scale(.96)}
+.acts button:focus-visible{outline:2px solid #ff8fb1;outline-offset:1px}
+.acts button.dis{opacity:.45;cursor:not-allowed}
+.acts button.fired{animation:actfire .7s ease-out}
+.acts button.nope{animation:actnope .35s}
+@keyframes actfire{0%{background:#ff8fb1;color:#111}100%{}}
+@keyframes actnope{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
+.acts .fx{position:absolute;right:6px;top:2px;font-size:12px;font-weight:bold;color:var(--ok);pointer-events:none;animation:actfx 1.6s forwards;white-space:nowrap}
+@keyframes actfx{0%{opacity:0;transform:translateY(4px)}15%{opacity:1}100%{opacity:0;transform:translateY(-16px)}}
+#toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(20,20,30,.92);color:#fff;border:1px solid #ff8fb1;padding:8px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99;max-width:90vw;text-align:center}
+#toast.on{opacity:1}
 .acts .cd{display:block;font-size:11px;color:var(--sub)}
 #log{height:300px;overflow-y:auto;font-size:13px;font-variant-numeric:tabular-nums;padding-right:4px}
 #log div{padding:3px 0;border-bottom:1px dashed #262a36}
@@ -53,16 +64,57 @@ main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1.2fr);ga
 .tabs{display:flex;gap:6px;margin-bottom:8px}
 .full{grid-column:1/-1}
 #modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;z-index:10;padding:16px}
-#modal .box{background:var(--panel);border:1px solid var(--acc);border-radius:14px;padding:18px;max-width:420px;width:100%}
+#modal .box{background:var(--panel);border:1px solid var(--acc);border-radius:14px;padding:18px;max-width:420px;width:100%;max-height:90vh;display:flex;flex-direction:column}
+#mBody{overflow-y:auto;min-height:0}
+#modal .box.wide{max-width:560px}
+.crow{cursor:pointer}.crow:hover{outline:1px solid var(--acc)}
+.chead{background:var(--panel2);border-radius:8px;padding:6px 9px;margin-bottom:8px;font-size:12px;color:var(--sub);display:flex;flex-wrap:wrap;gap:2px 10px}
+.dlock{background:#17181e;border:1px dashed var(--line);border-radius:8px;padding:6px 9px;margin-bottom:6px;font-size:12px;color:var(--sub)}
 #modal h3{margin:0 0 10px;color:var(--acc);font-size:16px}
 .goalrow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.hito{margin-top:6px;padding:6px 8px;border-left:3px solid var(--acc);background:#1d1a26;border-radius:4px;font-size:13px;display:flex;gap:8px;align-items:flex-start}
+.hito span.tx{flex:1}
+.hito button{padding:1px 7px;font-size:12px}
+.hito.t-bold{border-color:#ff8fb1}.hito.t-happy{border-color:var(--ok)}.hito.t-dry{border-color:#777c90}.hito.t-tired{border-color:var(--bad)}.hito.t-calm{border-color:var(--blue)}
+.redact{margin-top:4px;font-size:12.5px;color:#cfc6e6}
+.redact .blk{background:#3a3550;color:#3a3550;border-radius:3px;padding:0 2px;letter-spacing:-1px}
+.redact .op{color:#ffb3cf;border-bottom:1px dotted #ffb3cf}
+.memo{background:var(--panel2);border-radius:8px;padding:7px 10px;margin-bottom:6px;font-size:12.5px}
+.memo.dark{color:#a3a7b8;background:#1a1b21;font-style:italic}
+.memo.lock{opacity:.4}
+#memos,#scenes{max-height:240px;overflow-y:auto}
+.scene{display:flex;gap:8px;align-items:flex-start;background:var(--panel2);border-radius:8px;padding:6px 9px;margin-bottom:6px;font-size:12.5px}
+.scene .tx{flex:1}.scene button{padding:1px 7px;font-size:12px}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:999px;background:#2b2f3c;color:var(--sub);margin-right:4px}
+.ppchip{background:#2a2140;border:1px solid var(--acc);border-radius:999px;padding:3px 10px;font-size:12.5px;font-variant-numeric:tabular-nums}
+.ppbtn{padding:0 7px;font-size:11.5px;border-radius:999px;margin-left:4px;border-color:var(--acc)}
+.ppbtn:disabled{opacity:.45}
+.dent{background:var(--panel2);border-radius:8px;padding:7px 10px;margin-bottom:6px;font-size:12.5px}
+.dent .hd{display:flex;flex-wrap:wrap;gap:4px 10px;color:var(--sub);font-size:11.5px}
+.dent .ln{margin-top:3px}
+.pmk{font-style:normal;letter-spacing:1px;margin-right:2px}.flag{display:inline-block;font-size:11px;padding:0 6px;border-radius:999px;background:#3a2440;color:#ffb3cf;margin-right:4px}
+.chap{border:1px solid var(--line);border-radius:10px;padding:7px 9px;margin-bottom:8px}
+.chap h4{margin:0 0 6px;font-size:12.5px;color:var(--acc);font-weight:600}
+.chap.lock{opacity:.85;background:#17181e}
+#diary{max-height:420px;overflow-y:auto}
+.lvrow{display:grid;grid-template-columns:52px 1fr 64px;gap:6px;align-items:center;padding:3px 4px;border-radius:6px;cursor:pointer;font-size:12.5px}
+.lvrow:hover{background:var(--panel2)}.lvrow.sel{background:#2a2140;outline:1px solid var(--acc)}
+.lvrow .tr{height:12px;background:var(--panel2);border-radius:6px;overflow:hidden}.lvrow .fl{height:100%;background:#ff8fb1;border-radius:6px}
+.lvrow .n{text-align:right;font-variant-numeric:tabular-nums}
+.csum{display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0 8px;color:var(--sub);font-size:12px}
+.clist{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}
+.crow{background:var(--panel2);border-radius:8px;padding:6px 9px;font-size:12.5px}
+.crow .nm{font-weight:600}.crow .kv{display:flex;flex-wrap:wrap;gap:2px 10px;color:var(--sub);font-size:11.5px;font-variant-numeric:tabular-nums}
+.mk{display:inline-block;font-size:11px;padding:0 5px;border-radius:999px;background:#2b2f3c;margin-left:3px}
+#custPanel select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-size:12.5px}
 footer{text-align:center;color:var(--sub);font-size:11px;padding:10px 0 20px}
 </style>
 </head>
 <body>
 <header>
-  <h1>🌙 夜のシフト観察記</h1>
+  <h1>🌙 夜のシフト観察記 <span class="small" id="cycle"></span></h1>
   <div id="clock">-</div>
+  <div class="ppchip" id="ppchip" title="放置で少しずつ貯まり、節目でまとめて貰えます">-</div>
   <div class="speed" id="speed"></div>
 </header>
 <main>
@@ -104,22 +156,91 @@ footer{text-align:center;color:var(--sub);font-size:11px;padding:10px 0 20px}
     <div id="reports"><div class="small">まだ日報はありません。シフト終了後に作成されます。</div></div>
   </section>
 
+  <section class="card full" id="custPanel">
+    <h2>CUSTOMERS / 客サマリー＋客リスト</h2>
+    <div class="small">累計表示(そのレベル以上): お客さんごとの「これまでに到達した最高の許容度」を切り捨てたレベルで数え、「Lv.4以上」はLv.4かLv.5に達した人数です。バーをタップすると、そのレベル以上に絞り込めます(もう一度で解除)。</div>
+    <div id="custSum" style="margin-top:6px"></div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0">
+      <span class="small">並べ替え</span>
+      <select id="custSort"><option value="tol">許容度順</option><option value="trust">信頼順</option><option value="visits">来店回数順</option><option value="recent">最近来た順</option></select>
+      <span class="small" id="custFilterInfo"></span>
+    </div>
+    <div class="small" style="margin-bottom:6px">目印: 🆙 今月(30日以内)許容が進んだ / 💰 許容度は高いが信頼は低い / ⚡ イレギュラーな夜があった / 🍂 許容度が下がった(離れかけ)</div>
+    <div id="custList"></div>
+  </section>
+
+  <section class="card full">
+    <h2>PLAY DIARY / プレイ日記</h2>
+    <div class="small" style="margin-bottom:6px">ひよりが自分の手元に残している記録(ブログ等には載せていない)。3件で1章。章ごとにPPで開くと、ずっと読めます。</div>
+    <div class="tabs"><button data-dv="time">🕰️ 時系列</button><button data-dv="cust">👤 お客さんごと</button></div>
+    <div id="diary"></div>
+  </section>
+
+  <section class="card">
+    <h2>PRIVATE MEMO / 非公開メモ</h2>
+    <div class="small" style="margin-bottom:6px">評価が上がるほどページが増えます(新しいページが上)。p.1〜2は最初から読めます。</div>
+    <div id="memos"></div>
+  </section>
+
+  <section class="card">
+    <h2>SCENES / 名場面コレクション</h2>
+    <div class="small" style="margin-bottom:6px">日報のひとことの「☆」で保存できます。</div>
+    <div id="scenes"></div>
+  </section>
+
   <section class="card">
     <h2>BADGES / 実績</h2>
     <div class="badges" id="badges"></div>
     <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
-      <button id="resetBtn">データをリセット</button>
+      <button id="ngBtn">🔁 最初からプレイ</button>
+      <button id="resetBtn">🗑️ 全データ削除</button>
+    </div>
+    <div class="small" style="margin-top:6px">「最初からプレイ」: ひよりの進行は初期化。PP・解放済みの伏せ字/メモ/日記の章・名場面は引き継ぎます。<br>「全データ削除」: PPや解放状態も含めて、すべて消えます。
     </div>
   </section>
 </main>
 <footer>架空のキャラクターによるフィクションです。表示はステータス・数値・記録のみ。データはこのブラウザに自動保存されます。</footer>
+<div id="toast" role="status" aria-live="polite"></div>
 <div id="modal"><div class="box"><h3 id="mTitle"></h3><div id="mBody"></div><div style="text-align:right;margin-top:14px"><button id="mClose">閉じる</button></div></div></div>
 
 <script>
 "use strict";
-const SAVE_KEY = "hiyori_idle_v1";
+const SAVE_KEY = "hiyori_idle_v1";       // キーは据え置き(中身のバージョンで移行)
+const SAVE_VER = 6;
+const CUST_MAX = 500;      // 客リストに保存する人数の上限(常連以外の古い人から消える)
+const CUST_PAGE = 40;      // 客リストを一度に表示する人数
+// ---------- プレイヤー資源(名前はここ1か所で変更可能) ----------
+const PP_NAME = "PP";
+const PP_ICON = "💠";
+const PP_PER_HOUR = 2;        // 放置での加算(実時間1時間あたり)
+const PP_CAP = 50;            // 放置で貯まる上限(節目の報酬は上限を超えて受け取れる)
+const PP_START = 10;          // 初期値
+const PP_MS = 3600000/PP_PER_HOUR;   // +1 までの実時間(ms)
+const PP_REWARD = {rank:15, badge:3, money:10, reports:6};
+const PP_MONEY_MS = [300000,500000,1000000,1500000,2000000,3000000,5000000];
+const PP_REPORT_EVERY = 7;    // 日報N日分ごと
+const MEMO_COST = [3,5,8,10,12,15,18,22,28];   // 非公開メモ各ページの必要PP(深いほど高い)
+const MEMO_FREE_PAGES = 2;    // 最初から開いている(PP不要の)ページ数。p.1〜p.2
+// テストプレイ用: true の間は伏せ字・メモの解放コストがすべて1。false に戻すと下の元の値に戻る
+const TEST_COST_ONE = true;
+// 元のコスト表(伏せ字は REDACT 各行の c、メモは MEMO_COST)。REDACT 定義後に埋める
+const DIARY_CHAPTER = 3;      // プレイ日記: 何件で1章か
+const DIARY_COST = {base:4, milestone:8};   // 章の必要PP(節目の記録を含む章は高い)
+const DIARY_FREE_CHAPTERS = 1; // 最初から読める章数(体験用)
+const DIARY_MAX = 600;         // 保存する記録の上限(古い順に消える)
+const COST_TABLE_ORIGINAL = {memo:MEMO_COST, redact:null, diary:DIARY_COST};
 const SPEEDS = [0, 1, 5, 20, 60];        // ゲーム内の分 / 実時間1秒
-const OFFLINE_CAP = 7 * 24 * 60;          // オフライン進行の上限(分)
+const OFFLINE_CAP = 7 * 24 * 60;
+// 生理休暇: ゲーム内日付から決定的に計算(28日周期のうち5日。ランダムなし、セーブに新フィールド不要)
+const HOLIDAY_CYCLE = 28;
+const HOLIDAY_DAYS = 5;
+const HOLIDAY_START = 21;              // 周期内で休みが始まる日(日数0起点)
+const HOLIDAY_REST_MULT = 1.8;         // 休み中の体力・メンタル回復倍率(睡眠・休日の回復に掛ける)
+const HOLIDAY_REC = {loose:4, numb:2, risk:1.5};   // 休み1日あたりの追加回復(ゆるみ・感情の鈍り・体調リスク)
+const isHoliday = n=>((n-HOLIDAY_START)%HOLIDAY_CYCLE+HOLIDAY_CYCLE)%HOLIDAY_CYCLE < HOLIDAY_DAYS;
+const holidayNow = ()=>!!(S.isOff && S.day && isHoliday(S.day.n));
+// a日目の翌日〜b日目のうち、休みを除いた日数(上限capで打ち切り)
+function workDaysBetween(a,b,cap=99){ let n=0; for(let k=a+1;k<=b&&n<=cap;k++) if(!isHoliday(k)) n++; return n; }          // オフライン進行の上限(分)
 const WD = ["日","月","火","水","木","金","土"];
 const ST = {
   sleep:{l:"睡眠中",i:"😴",c:"#6a6f88"}, off:{l:"オフ",i:"☕",c:"#6aa8ff"}, prep:{l:"出勤準備",i:"💄",c:"#b48cff"},
@@ -135,39 +256,385 @@ const BADGES = [
   ["first","🔰","はじめての出勤"],["s10","🎯","通算10件"],["s100","💯","通算100件"],["reg1","🤝","初めての常連"],
   ["reg10","👑","常連10人"],["d50k","💴","日売上5万"],["d100k","💰","日売上10万"],["sv500k","🏦","貯金50万"],
   ["sv2m","🗝️","貯金200万"],["rank1","⭐","ランクアップ"],["rank3","🌟","上位キャスト到達"],["goal","🏁","目標達成"],
-  ["star5","✨","★5評価"],["care","🫶","差し入れ10回"],["week","📅","7日間記録"],["rain","☔","雨の日出勤"]
+  ["star5","✨","★5評価"],["care","🫶","差し入れ10回"],["week","📅","7日間記録"],["rain","☔","雨の日出勤"],
+  ["tol2","🔓","許容度2"],["tol4","🗝","許容度4"],["trust80","💞","信頼80の常連"],["scene1","🎞️","名場面を保存"],["memo4","📓","非公開メモを4ページ読んだ"]
 ];
 const FOODS = ["おにぎり🍙","コンビニのパスタ🍝","あったかいスープ🥣","プリン🍮","サンドイッチ🥪","たい焼き🐟","フルーツ🍓"];
 const OFFACTS = ["専門学校の課題をしている","カフェで休んでいる","買い物に出かけている","部屋の片付けをしている","友達とお茶している","語学の勉強をしている","昼寝している"];
 
+// ---------- キャラクターの素質(将来のキャラ追加用に1オブジェクトにまとめる) ----------
+const CHAR_TRAITS = {
+  hiyori:{
+    name:"ひより", type:"素質型",
+    tolCap:5,          // 許容の上限
+    growth:1.9,        // 許容の伸びやすさ(1=標準)
+    drainResist:.85,   // メンタル消耗への耐性(0〜1、高いほど減りにくい)
+    numbRate:.15,      // 感情の鈍りやすさ(低いほど溜まりにくい)
+    looseRate:.5,      // 境界線のゆるみやすさ
+    riskRate:.5,       // 体調リスクの溜まりやすさ(慎重な性格なので低め。ただしゼロではない)
+    tolStart:1.0,      // 許容度の初期値
+    // 隠し適性(最終的な到達点)。開花度は低めから始まる
+    apt:{costume:.85, play:.85, lead:.8, receive:.8},
+    bloomStart:{costume:.15, play:.12, lead:.12, receive:.14}
+  }
+};
+// お客さんタイプ
+const CTYPES = {
+  kind :{l:"優しい常連",   i:"🌸", w:.34, tol0:[.6,1.6], tolGain:1.2, tolMax:5,   trust:1.4, love:1.4, sales:1.00, rate:.15, mp:0},
+  pushy:{l:"押しの強い客", i:"🔥", w:.26, tol0:[1.0,2.4],tolGain:1.5, tolMax:5,   trust:.7,  love:1.2, sales:1.10, rate:0,   mp:-1},
+  rich :{l:"金払いの良い客",i:"💎", w:.22, tol0:[.8,2.0], tolGain:1.0, tolMax:5,   trust:1.0, love:1.1, sales:1.45, rate:.05, mp:0},
+  bad  :{l:"苦手なお客さん",i:"⚠️", w:.18, tol0:[0,.8],   tolGain:.2,  tolMax:1.5, trust:.2,  love:.5,  sales:.90, rate:-.5, mp:-12, subs:["不快感の強い客","デリカシーのない乱暴な客"]}
+};
+const REASON_L = {trust:"信頼・好意", duty:"お金・義務感", habit:"慣れ"};
+
+// ---------- 日報のひとこと ----------
+const LINES = {
+  happy:[
+    "今夜のひよりは、少し楽しそうだった","帰りのタクシーで、小さく鼻歌を歌っていた","「今日はいい日だった」とだけ、メモに書いてあった",
+    "待機室に戻るたび、少しずつ機嫌が良くなっていた","帰り道、コンビニでアイスを二つ買っていた","{name}の話をするとき、声が少し弾んでいた",
+    "退勤の報告が、いつもより一行長かった","鏡の前で、少しだけ長く自分を見ていた","今夜はずっと、口元がゆるんでいた"],
+  bold:[
+    "今夜のひよりは、いつもより少し大胆だった","いつもは断る延長を、今日は受けた","衣装を選ぶ時間が、いつもより短かった。迷いがなかったらしい",
+    "「今日はいける気がする」と言って出ていった","今夜は、自分から一歩踏み込んだらしい","スタッフが「今日のひよりちゃん、ちょっと違うね」と言っていた",
+    "今夜は、断る理由を探さなかった","帰ってきたひよりは、少し得意げだった","「次はもう少し、いけるかも」と小さく言った"],
+  dry:[
+    "今夜の報告は「おわった」の一言だけだった","誰が来ても、同じ顔で帰ってきた","特に書くことはない、と本人は言った",
+    "売上の数字だけを確認して、スマホを閉じた","「別に、いつも通り」","今夜の相手の名前を、もう覚えていなかった",
+    "帰り道、一度もスマホを見なかった","淡々と、予定どおりに終わった","誰の話も、しなかった"],
+  tired:[
+    "帰宅してすぐ、着替えずに眠ってしまった","「今日はちょっと、しんどかった」","帰りのタクシーで、ずっと窓の外を見ていた",
+    "返信を打っては消して、結局スタンプだけ送った","メイクを落とす手が、いつもより遅かった","今夜は、あまり話したがらなかった",
+    "淹れたお茶を、飲まないまま冷ましていた","「明日は休みたいな」と小さくこぼした","連続出勤{streak}日目。笑顔の数が少し減った"],
+  calm:[
+    "「平気だよ」と、いつもの調子で笑った","いつも通りに出て、いつも通りに帰ってきた","今夜も、特に問題はなかったらしい",
+    "体は疲れているけど、表情は明るかった","「慣れてきたかも」と、少しだけ誇らしげだった","待機中、ずっと課題のノートを開いていた",
+    "帰り道、明日の授業の話をしていた","本人いわく「わりと楽しかった」","体はくたくた。でも気持ちは軽いらしい"]
+};
+const TONE_L = {happy:"楽しそう", bold:"大胆", dry:"そっけない", tired:"疲れた", calm:"平気"};
+const REL_LINES = [
+  "また、あの人だった","{name}は、今日も同じ時間に予約を入れていた","{name}が帰り際に何か言いかけて、やめた",
+  "{name}の前では、少しだけ素の顔になるらしい","「{name}なら、まあいいか」と言っていた",
+  "{name}の来店が{visits}回目になった。本人は数えていないふりをしている","{name}からの予約メールを、少しだけ長く見ていた",
+  "{name}とは、もう説明のいらない関係らしい"];
+const STAR_LINES = [
+  "今夜の評価は★5.0。本人は理由を話したがらない","★5.0がついた。本人は「たまたま」と言う","★5.0。スタッフが二度見していた",
+  "満点の評価。ひよりは少しだけ目をそらした","★5.0の理由欄は、空欄のままだった","★5.0。帰り道、ずっと黙って笑っていた",
+  "今夜の★5.0について、本人は「内緒」とだけ","★5.0。お客さんのコメント欄は「また必ず」の一言"];
+const BAD_LINES = [
+  "今夜は一人、合わないお客さんがいた。帰りは口数が少なかった","「今日のあの人は、ちょっと無理だった」","スタッフにだけ、小さく首を振ってみせた",
+  "苦手なタイプのお客さん。報告は短かった","帰宅後、好きな動画をずっと流していた","「次からNGにしてもいい?」と店に相談していた",
+  "気分を変えるように、甘いものを買って帰った","その一件のことは、日報に書かれていない"];
+const DUTY_LINES = [
+  "「今は、断れないから」とだけ言った","帰り道、通帳アプリを何度も開いていた","「稼がなきゃ」と自分に言い聞かせていた",
+  "今夜は、少し無理をしていたように見えた","笑ってはいたけど、目は笑っていなかった","「今月だけ、頑張る」",
+  "数字を確認して、小さくため息をついた","いつもなら断る誘いを、今日は断らなかった"];
+const FREE_LINES = [
+  "誰にでも、同じように笑うようになった","相手が誰でも、もう迷わないらしい","常連さんの名前を呼ぶ回数が減った",
+  "「特別」という言葉を、最近使わなくなった","今夜も、誰に対しても同じだった","前は相手を選んでいた気がする、と本人が言った",
+  "線を引く場所を、もう探していないようだった","売上だけが、静かに伸びている"];
+// 伏せ字: pre + [secret] + post。need: {k:"tol",v} or {k:"trust",v,id}
+const REDACT = [
+  {pre:"帰り際、{name}に「",sec:"また、あの続きをね",post:"」と言われていた",c:8,k:"trust"},
+  {pre:"今夜の延長は「",sec:"本人が言い出した",post:"」らしい",c:6,k:"tol"},
+  {pre:"スタッフの記録には「",sec:"相性：とても良い",post:"」とだけある",c:4,k:"trust"},
+  {pre:"今夜のひよりは、",sec:"自分から距離を詰めていた",post:"",c:7,k:"tol"},
+  {pre:"{name}の要望を、",sec:"ほとんど全部、笑って受け入れた",post:"らしい",c:12,k:"tol"},
+  {pre:"本人のメモ:「",sec:"嫌じゃなかった。むしろ",post:"」",c:10,k:"tol"},
+  {pre:"お店の申し送り:「",sec:"許容範囲、更新",post:"」",c:9,k:"tol"},
+  {pre:"「",sec:"またすぐ会いたい",post:"」——と、珍しく本人から言った",c:8,k:"trust"},
+  {pre:"担当スタッフいわく「",sec:"どっちの役回りも楽しんでた",post:"」",c:11,k:"tol"},
+  {pre:"{name}は帰り際、",sec:"次の予約をその場で入れた",post:"",c:5,k:"trust"}
+];
+COST_TABLE_ORIGINAL.redact=REDACT.map(x=>({sec:x.sec,c:x.c}));
+// 非公開メモ: [必要な評価(平均), 必要な通算件数, 明るい版, 暗い版]
+const MEMOS = [
+  [0,0,"まだ慣れないことばかり。でも、思ってたより平気かも","まだ慣れない。早く慣れたい"],
+  [3.6,10,"褒められると、素直にうれしい。私、向いてるのかな","褒められても、うまく笑えない日がある"],
+  [3.8,25,"衣装を選ぶのが、ちょっと楽しみになってきた","衣装を選ぶ気力がない日もある"],
+  [4.0,40,"怖いと思ってたこと、意外と平気だった。むしろ……(ここで書きかけ)","平気なふりをするのが、上手くなった気がする"],
+  [4.15,70,"相手によって自分が変わるのが面白い。引っぱるのも、任せるのも","相手に合わせすぎて、自分がどこにいるのか分からなくなる"],
+  [4.3,110,"引いていたはずの線が、少しずつ前に動いている","線がどこにあったか、思い出せない"],
+  [4.45,160,"「留学資金のため」って言い訳、最近あんまり使ってない","全部お金のため、と言い聞かせる"],
+  [4.6,230,"誰にも言えないけど、この仕事のこと、嫌いじゃない","誰にも言えない。言う相手もいない"],
+  [4.75,320,"█████。……これは、まだ自分にも内緒にしておく","今日は何も書きたくない"]
+];
+// ---------- プレイ日記のひとこと(タイプ × 許容度帯: low<1.5, mid<3, high<4.3, max) ----------
+// 許容レベル帯: low=Lv0〜1(標準の範囲) / mid=Lv2(時間や距離のサービス増し) / high=Lv3(表向き禁止の踏み込み) / max=Lv4以上(書かない)
+const DIARY_LINES = {
+  kind:{
+    low:["今日はたくさん話して、少しだけキスした。穏やかな時間だった","手が触れたとき、あったかいなと思った。お客さんも満足そうで、私も楽しかった",
+      "急がない人。こっちのペースに合わせてくれるのが、うれしい","「無理しないでね」って言われた。ちゃんと聞いてくれる人だ","いつもの流れ。安心する時間だった","帰り際の「ありがとう」が、今日いちばんうれしかった"],
+    mid:["話してたら時間を忘れてた。タイマーが鳴っても、しばらく笑ってた","少しだけ時間オーバー。次の予約には響かなかったから、まあいいか","いつもより距離が近かった。それが自然だった","「もうちょっとだけ」って言われて、うなずいてしまった","帰り際、なかなか手を離してくれなかった。私も離さなかった","時計を見ないようにしてた。たぶん、お互いに"],
+    high:["ここまでやっていいの?と思いながら、止めなかった","優しい人だから、つい一歩先まで。ドキドキした","「内緒ね」って言ったの、私のほうだった","本当はダメなんだけど。この人なら、と思ってしまった","いつもの線を、少しだけ越えた。後悔はしてない","ドキドキしながら、少し踏み込んだ。嫌じゃなかった"],
+    max:["今まで断っていたことを、今日は許した。この人なら、と思えたから","今日は私から誘った。驚いた顔がちょっとかわいかった","引っぱる側も、任せる側も、どっちもやった。どっちも楽しかった",
+      "いつもより深いところまで許した夜。ちゃんと満たされた","終わったあと、しばらく体温が離れなかった","「大事にしてもらってる」と思えた。だから、もう少し委ねた",
+      "全部任せてしまった夜。これ以上は書かない","全部許した。この人の前だと、線なんて最初からなかったみたい。……ここまで","満たされた、とだけ書いておく",
+      "何をしたかは、私とこの人だけが知っていればいい","書こうとして、やめた。思い出すだけで十分","「また来るね」の一言で、全部報われた気がする。その前のことは、内緒"]
+  },
+  pushy:{
+    low:["押しが強い人。今日はちゃんと断れた","距離が近い。悪い人じゃないけど、ちょっと身構えた","「もっと」と言われて、笑ってごまかした",
+      "予定より少しだけ踏み込まれた。まだ大丈夫","ペースを握られそうになって、なんとか戻した","帰ったあと、ちょっとだけ肩の力が抜けた"],
+    mid:["押し切られて、時間オーバー。まあ、注意で済む範囲","タイマーが鳴っても「あと5分」が3回続いた","距離が近い人。今日はあえて逃げなかった","強引に引き止められた。ちょっと楽しかったのは内緒","時間を延ばされた。料金はそのまま。次は気をつけよう","ぐいぐい来るのを、笑ってかわしきれなかった"],
+    high:["ここまでやっていいの?って顔をしたら、押し切られた","流されたのか、乗ったのか。ここまでは初めて","断るつもりだったのに、気づいたら一歩先にいた","「ダメ」って言いながら、本気では止めなかった","勢いに負けた夜。ドキドキはまだ残ってる","押されて、少し踏み込んだ。あとで思い返すと、楽しかったのかも"],
+    max:["また流された。でも今日は、途中から私が引っぱっていた","許すつもりのなかったところまで、許した。勢いって怖い","押し返したら、思ったより盛り上がった。負けず嫌いなのかも",
+      "ぐいぐい来る人に合わせるのが、ちょっと楽しくなってきた","息づかいが荒いまま時間切れ。満足そうだった。私も、まあ","流されたのか、乗ったのか、自分でも分からない",
+      "最後まで流されて、全部委ねた。それ以上は書かない","何を許したか、数えるのをやめた","強引さに全部任せた夜。……書かないでおく",
+      "抵抗するふりも、今日はしなかった。ここまで","自分でも驚くくらい、平気だった。それ以上は内緒","終わったあと、少しだけぼんやりした。それだけ書いておく"]
+  },
+  rich:{
+    low:["金払いのいい人。今日はお話中心で、楽な夜だった","チップをもらった。その分、ちゃんと笑顔でいた","仕事として、きっちり。それでいいと思う",
+      "「また指名するよ」。ありがたい、と素直に思う","少しだけ触れ合って、時間どおり。割り切れる人は楽","高い時計の話を、上手に聞けた気がする"],
+    mid:["チップのおかげで、時間のことは少しだけ忘れた","延長分はもらってない。そのかわり、また指名してくれるはず","いつもより近い距離で話した。気前のいい人には、気前よく","タイマーが鳴っても、話の続きを聞いていた","時間オーバー。でも次の予約には響かなかったから、セーフ","少しだけサービス多め。これくらいなら、いいよね"],
+    high:["ここまでやっていいの?と思いながら、封筒の厚みを考えてた","割り切ってるつもりで、少し踏み込んだ。少しだけ後ろめたい","「君は特別だ」と言われて、特別なことをした","本当は断るところ。今日は断らなかった","お金のせいにしておく。ドキドキしたのは本当","いつもの線より、一歩だけ先。対価としては、たぶん妥当"],
+    max:["いつもなら断ることを、今日は許した。理由は……書かなくても分かる","割り切ってるつもりで、ちゃんと楽しんでいた。それが少し後ろめたい","「君は特別だ」と言われた。お金のせいにしておく",
+      "求められたことに、全部応えた。満足そうだった","気前のいい夜。私の線も、少し気前よくなった","体温は本物だった。気持ちのほうは、まだ分からない",
+      "全部任せた。対価に見合ったかどうかは、書かない","何でも許した夜。留学資金が、また少し近づいた。それ以上は書かない","割り切り、のはずだった。……ここまで",
+      "この人の望むとおりに。その中身は、日記にも残さない","罪悪感は、思ったより小さかった。それが少しこわい","満足させた、とだけ書く"]
+  },
+  bad:{
+    low:["早く終わってほしかった","合わない人。最低限だけ","何も書きたくない","時計ばかり見ていた","無理なものは無理、と断った","終わった。以上"],
+    mid:["我慢した。それだけ","早く終わってほしかった。終わってよかった","断ったら不機嫌になった。もう会いたくない","仕事、と割り切った。次はNGにしたい","楽しくはなかった","帰ってすぐ、気分を変えた"],
+    high:["許したことを、少し後悔している","流された。次はない","何も感じないようにしていた","早く終わってほしかった。それだけ","書かない","二度と、とだけ書いておく"],
+    max:["書かない","忘れる","ここには何も残さない","終わった。もういい","何も思い出したくない","早く終わってほしかった"]
+  }
+};
+// 表示レベル5以上の夜専用(全タイプ共通。苦手なお客さん・デリカシーのない夜は除く)
+const DIARY_LV5_NIGHT = ["けっこう興奮した。","変な声が出た。","乱れてみた。",
+  "けっこう興奮した。仕事だって分かってるのに、途中から忘れてた。","変な声が出た。自分でもびっくりしたけど、まあ、たまにはね。",
+  "乱れてみた。あとで時計を見て、ちゃんと時間は守ったことだけ確認した。","頭の中が、途中からふわっと白くなった。終わったら、いつもの私に戻った。",
+  "気づいたら笑ってた。いつもの私じゃなかった気がする。それ以上は書かない。","ちょっとだけトリップした。帰りの電車では、もう冷静だった。",
+  "乱れたのは今夜だけ、ってことにしておく。次の予約には響かなかったから、まあ。","自分でも知らない声が出た。メモは、ここまで。"];
+const LV5_NIGHT_P = 0.6;   // Lv5の夜に1行目をこのプールから選ぶ確率(外れは従来の文)
+const DIARY_LV5 = ["ここから先のことは、書かないって決めてる","今夜のことは、日記にも残さない","……書きかけて、全部消した","どこまで許したかは、私だけが知っていればいい"];
+const DIARY_EXTRA = {
+  enjoy:["正直に書くと、楽しかった","こういう時間、やっぱり嫌いじゃない","引っぱるのも、任せるのも、どっちも好きなんだと思う","帰り道、ちょっと思い出して笑ってしまった","満足。今日はそれだけで十分"],
+  duty:["今は、断れないから。","お金のこと、少し考えながらだった","今月だけ、と自分に言い聞かせた"],
+  free:["誰でも同じ、と思いかけている自分がいる","名前を書こうとして、少し迷った","それなりに楽しかった。それなりに"],
+  tired:["体はくたくた。気持ちは、まあまあ","眠い。続きは、また今度書く"]
+};
+// ---------- 関係性別のひとこと(許容度が一定以上のときだけ出る) ----------
+const REL_MIN_TOL = 2.5;     // 新規への「雰囲気が良ければ許す」が始まる全体許容度
+const NEW_MAX_TOL = 4.4;     // 新規・常連(特別以外)で届く上限=Lv4
+// 序盤のイレギュラー: 全体許容度が低い時期でも、雰囲気が良く気遣いのある新規客に限り、ごく低確率でその夜だけLv4
+const IRREG_LV4_P = 0.04;
+// 一度Lv4を許した客(イレギュラーを除く到達点が4.0以上)は、以降ほぼ毎回Lv4以上
+// 日記1行目の頭に付ける記号(絵文字のみ)。基本はすべての夜、過剰はLv4以上(切り捨て)
+const PLAY_MARKS_BASE = ['💋','✋️'];
+const PLAY_MARK_LV4 = '❤️';
+const PLAY_MARK_LV5_SPLASH = true;   // Lv5以上で ❤️💦(false なら ❤️❤️)
+function playMarks(L){ let m=PLAY_MARKS_BASE.join(""); if(L>=5) m+=" "+PLAY_MARK_LV4+(PLAY_MARK_LV5_SPLASH?"💦":PLAY_MARK_LV4); else if(L>=4) m+=" "+PLAY_MARK_LV4; return m.trim(); }
+// ---------- 噂の広がり(隠し数値 rumor 0〜100。画面に数値は出さない) ----------
+const RUMOR_ADD = {lv4:2.5, lv5:5.0};    // 新規・一見の客にLv4/Lv5を許した夜の増加
+const RUMOR_REG_K = 0.2;                 // 常連の夜の増加は新規の1/5程度
+const RUMOR_REG_P = 0.2;                 // しかも「書く人」はたまにしかいない(この確率の夜だけ増える)
+const RUMOR_DECAY = 0.04;                // 1日あたりの減衰率(休み中も同様)
+const RUMOR_HINT = {min:15, step:20, p:0.45};   // 匂わせログ: rumor≥minで、日ごとの確率 p×rumor/100。step を越えるごとに1回は出やすくなる
+const RUMOR_MIS_MAX = 0.3;               // rumor=100のとき、新規客のうち「勘違い客」になる割合
+const RUMOR_DEMAND = 0.12;               // rumor=100のとき、来店ペースの上乗せ
+const RUMOR_HEAT = 1.2;                  // rumor=100のとき、お店の目が1日に上がる量
+const RUMOR_SHOP_P = 0.3;                // rumor=100のとき、注意イベントの起きやすさの上乗せ
+const RUMOR_HINTS = ["📱 最近、新規のお客さんが増えた気がする","📱 初めてなのに、妙に距離の近い客が来た","📱 どこかで、何か書かれているのかもしれない",
+  "📱 予約の入り方が、少し変わってきた","📱 「聞いてたのと違う」って言われた。何を聞いたんだろう","📱 最近、初めての人の予約が妙に多い",
+  "📱 知らない人が、私のことを知っているみたいだった","📱 噂って、どこから広がるんだろう","📱 写真指名でもないのに、名前で予約が入った"];
+const DIARY_WALL = ["ここまでは無理。そこははっきり言った","線は私が引く。今日はここまで","「そういうのはしてないよ」って、笑顔で返した",
+  "できることと、できないことがある。今日は後者","最初から決めつけられると、扉は閉まる","やんわり、でもきっぱり断った"];
+const DIARY_EXPECT = ["期待されている感じがして、ちょっと嫌だった","何かを聞いてきた人みたいだった。少しだけ、もやっとした","「話と違う」って顔をされた。知らない",
+  "最初から当然みたいな態度。そういうのが一番冷める","誰に何を聞いたんだろう。考えないことにした"];
+const LV4_REPEAT_P = 0.9;      // その夜Lv4以上に固定される確率
+const LV4_REPEAT_MIN = 4.0;    // 固定時の下限
+const LV4_REPEAT_RISK = 1.3;   // 固定された夜の体調リスク係数(新規の1.6より緩め、通常の1より高め)
+const DIARY_NOMOOD = ["今日は、そういう気分じゃなかった","いつもの流れにはならなかった。たまにはこういう日も","今夜は、話してるだけで終わった。それでよかった",
+  "なんとなく、今日はやめておいた","気分の波。この人には、ちゃんと言えた","次はたぶん、いつも通り。今日はお休み"];
+// Lv4を許した夜の、素の許容度への小さな加算(回数が増えるほど小さく)。信頼のある相手は成長、打算・雰囲気は一部が「慣れ」へ
+const LV4_GROW = {base:.03, decay:.12, trustLine:50, habitShare:.4, numbK:20};
+const DIARY_IRREG = ["初めてなのに、つい許してしまった","どうしてあそこまで許したのか、自分でも分からない","普段の私なら、絶対しない。……今夜だけ",
+  "初対面の人なのに。あの空気のせいにしておく","思い出すと、まだ落ち着かない。それ以上は書かない","雰囲気に流された、のかな。嫌じゃなかったのが、ちょっとこわい"];
+const DIARY_REL = {
+  // 新規・雰囲気が良い: 許す。打算を含む一言
+  newGood:{
+    mid:["初めての人だけど、雰囲気がよかったから時間は気にしなかった","また来てほしいから、ちょっとだけ時間オーバー","他の子より長く感じてもらえたら、勝ち",
+      "感じのいい人。タイマーが鳴っても、すぐには立たなかった","印象を残したくて、いつもより近くに座った","リピートしてくれたらうれしい。だから、少しだけ多めに"],
+    high:["ここで印象を残したかった。だから、ちょっとだけ先まで","他の子と差をつけたい。初回だけど、少し踏み込んだ","ここまでやっていいの?と思ったけど、また来てほしかった",
+      "雰囲気がよかったから、内緒の一歩。リピートしてくれたらうれしい","気遣いのある人だったから、少しだけ許した","「この子にしてよかった」って思ってほしかった"],
+    max:["初回なのに、全部許した。次も指名してくれるはず、たぶん","雰囲気で決めた。ここで差をつけておきたかったし。……それ以上は書かない","他の子じゃ、ここまではしないと思う。そこが私の売り",
+      "印象に残すなら今夜だと思った。結果は、満足そうな顔","打算半分、楽しさ半分。どっちも本当","初めての人に、ここまで委ねたのは久しぶり。「また来てね」の意味をこめて"]
+  },
+  // 新規・デリカシーのない客: 許さない。短くそっけなく
+  newRude:["無理な人。最低限だけ","デリカシーのない人には、何もしない","雰囲気以前の問題。早く終わってほしかった","断った。それで正解","時間どおり。それ以上はなし","次はたぶん、ない"],
+  // 仲良しの常連: 軽薄で明るいノリ
+  close:{
+    kind:{
+      high:["今日はふたりでふざけて、気づいたら時間ぎりぎりだった","「ここまでいいの?」って聞いたら、笑ってうなずかれた","「今日は甘えていい?」って言ったら、本当に甘やかされた","会うたびノリが良くなっていく。今日もはしゃいだ","ちょっとだけ内緒の寄り道。ふたりで笑ってごまかした"],
+      max:["今日はやりまくった。楽しんだ。","お互い遠慮なし。ずっと笑ってた","いつもより長めにいちゃいちゃした。楽しかった","ふたりでふざけて、気づいたら朝みたいな時間だった。","遠慮ゼロの夜。何をしたかは、ふたりの秘密","笑って、ふざけて、全部許して。今日も満点","終わったあと、ふたりして「やりすぎたね」って笑った"]
+    },
+    pushy:{
+      high:["押しが強いのも、仲良くなると楽しい。今日は私も押し返した","「ここまでやっていいの?」って顔をしたら、向こうも同じ顔だった","言い合いみたいにじゃれて、気づいたらタイマーが鳴ってた","ちょっとだけ線をはみ出した。お互い、知らんぷり","ふざけ合いが止まらなかった。体力は使ったけど、気分は最高"],
+      max:["今日は完全に悪ノリ。最高だった。","お互い負けず嫌いで、張り合ってたら盛り上がりすぎた","ノリで「もう一回」って言ったのは私のほう","今日は好き放題。お互いさま","悪ノリが悪ノリを呼んで、収拾つかなかった。楽しかった。","どっちが主導権を握ってたか、途中から分からなくなった。笑","遠慮なしでぶつかり合った夜。それ以上は書かない","ふたりともテンションおかしかった。最高の意味で"]
+    },
+    rich:{
+      high:["お金の話は抜き。今日はただ遊んだって感じ","気前もノリもいい人。今日はずっとはしゃいでた","「ここまでしていいの?」って思いながら、つい乗っちゃった","「今日はご褒美ね」って言われた。どっちのご褒美か分からなかった","楽しすぎて、時間を延ばしてもらった"],
+      max:["泡みたいに軽くて楽しい夜だった","今日はやりたい放題。楽しんだ。お釣りがくるくらい","割り切りとか、もう関係ない。普通に楽しかった","豪華な夜。中身は、ふたりだけの話","ふざけて、甘えて、全部任せた。最高","笑いすぎてメイクが崩れた。それ以外は書かない"]
+    }
+  },
+  // 信頼が非常に深い相手: 軽さの中の素直な一言
+  deep:["ふざけてたけど、最後は少しだけ本気だった","笑ってたのに、帰り際にちょっとだけ泣きそうになった","軽いノリのつもりだった。でも、離れるのが惜しかった","「好き」って言いかけて、冗談にした",
+    "楽しかった。……楽しいだけじゃないのかも","この人の前だと、ふざけてても素の私でいられる","帰り道、ずっとこの人のことを考えてた","ふざけ合いの最後に、ふと静かになった。あの時間が一番よかった"]
+};
+const REL_L = {new:"初めての人",reg:"常連",close:"仲良し",deep:"特別"};
+// 関係性: 来店が少ない/信頼が低い=new、信頼と本気度が高い=close、とても深い=deep
+function relOf(g){
+  if(!g || g.visits<=2 || g.trust<30) return "new";
+  if(g.trust>=85 && g.love>=70) return "deep";
+  if(g.trust>=60 && g.love>=45) return "close";
+  return "reg";
+}
+const DIARY_FLAG = {
+  tolup:{l:"許容度が上がった夜", tx:["今夜、自分の中の線がひとつ動いた","前の私なら、たぶん断っていた"]},
+  step:{l:"初めて踏み込んだ夜", tx:["この人と、初めて一歩踏み込んだ夜","初めてのことだった。ドキドキが、まだ残っている"]},
+  love50:{l:"本気度50超え", tx:["この人の目が、前と違って見えた","最近、この人の予約がちょっと楽しみ"]},
+  love80:{l:"本気度80超え", tx:["本気かもしれない、と思った。……どっちが?","この人の「またね」が、少し重たくてうれしい"]},
+  first:{l:"初めてのお客さん", tx:[]},
+  irreg:{l:"イレギュラーな夜", tx:[]}
+};
+const CHECK_LINES = ["検診の日。結果は問題なし","検診に行ってきた。問題なし。ちょっとほっとした","定期検診。いつも通り、異常なし","検診の帰りに甘いものを買った。結果は問題なし"];
+// お店の非公認設定: 店は知っているが表面上は禁止。黙認は「何も触れない」ことで表現し、文面では言及しない。
+// 注意イベントは表向きの理由だけを口にする(裏の理由=目立ちすぎ は隠し数値 shop.heat のみ)
+const SHOP_EVENTS = [
+  {tx:"👔 店長から、お客様対応の態度について軽く注意された",mp:[-5,-2],rate:-.1,heat:-25},
+  {tx:"📋 抜き打ち面談。時間管理について、いくつか確認された",mp:[-4,-1],rate:0,heat:-20},
+  {tx:"📋 抜き打ち面談。身だしなみのチェックだけで、すぐに終わった",mp:[-3,-1],rate:0,heat:-15},
+  {tx:"👔 店長から「予約の取り方、もう少し丁寧にね」と言われた",mp:[-4,-2],rate:-.1,heat:-20},
+  {tx:"👔 店長に「最近、終わりの時間が少し押してるね」と言われた",mp:[-4,-1],rate:0,heat:-20},
+  {tx:"🗒️ 待機室に「接客マナーの再確認」の紙が貼り出された",mp:[-2,-1],rate:0,heat:-12}
+];
+const LOWKEY_LINES = ["🤫 「目立たないようにね」と声をかけた。ひよりは小さくうなずいた","🤫 「最近いろいろ忙しそうだし、気をつけてね」と伝えた。ひより「うん、大丈夫」"];
+
+
+function defChar(){
+  const T=CHAR_TRAITS.hiyori;
+  return {id:"hiyori",risk:5,tol:T.tolStart,bloom:Object.assign({},T.bloomStart),loose:0,free:false,numb:0,duty:0,push:0};
+}
+function defDay(n){return {n,sales:0,count:0,nom:0,ratings:[],ev:[],start:null,early:false,goalHit:false,effMax:0,effSum:0,reasons:{trust:0,duty:0,habit:0},bad:0,regs:{}};}
 function defState(){
-  return {v:1,t:(1*24+11)*60,speed:1,last:Date.now(),
+  return {v:SAVE_VER,t:(1*24+11)*60,speed:1,last:Date.now(),
     st:"off",stEnd:0,sub:OFFACTS[0],cur:null,
     hp:85,mp:80,money:120000,dream:3000000,
     rating:[],total:0,totalSales:0,regs:{},nextCust:1,
-    day:{n:0,sales:0,count:0,nom:0,ratings:[],ev:[],start:null,early:false,goalHit:false},
+    day:defDay(0),
     weather:"晴れ",demand:1,offTomorrow:false,isOff:false,
-    goal:0,cd:{rest:0,food:0,msg:0,off:0},care:0,badges:{},reports:[],log:[],rank:0,days:0};
+    goal:0,cd:{rest:0,food:0,msg:0,off:0,push:0,stop:0,check:0,lowkey:0},care:0,badges:{},reports:[],log:[],rank:0,days:0,
+    ch:defChar(),streak:0,lastWork:-9,lastTopReg:null,scenes:[],memoMax:1,
+    pp:PP_START,ppLast:Date.now(),memoRead:[],ppMoneyIdx:0,repTotal:0,
+    diary:[],diaryNo:0,diaryOpen:[],diaryView:"time",sickDays:0,pendingCheck:false,effRecord:0,
+    cycle:1,carryRed:[],shop:{heat:0,lowKeyUntil:0},rumor:0,rumorStep:0,rumorLast:-1,rumorN:{fromNew:0,fromReg:0,hint:0,mis:0,wall:0,newCust:0},
+    cust:{},custPrev:null,custSort:"tol",custLv:null};
 }
 let S = load();
 
+function migrate(d){
+  const base=defState();
+  const fromV1 = !d.v || d.v<2;
+  const s=Object.assign(base,d);
+  s.ch=Object.assign(defChar(),d.ch||{});
+  s.ch.bloom=Object.assign(defChar().bloom,(d.ch&&d.ch.bloom)||{});
+  s.day=Object.assign(defDay(d.day&&d.day.n!=null?d.day.n:Math.floor(s.t/1440)),d.day||{});
+  s.day.reasons=Object.assign({trust:0,duty:0,habit:0},s.day.reasons||{});
+  s.day.regs=s.day.regs||{};
+  s.cd=Object.assign({rest:0,food:0,msg:0,off:0,push:0,stop:0,check:0,lowkey:0},d.cd||{});
+  s.shop=Object.assign({heat:0,lowKeyUntil:0},d.shop||{});
+  if(typeof s.rumor!=="number"||!isFinite(s.rumor)) s.rumor=0;
+  s.rumorN=Object.assign({fromNew:0,fromReg:0,hint:0,mis:0,wall:0,newCust:0},d.rumorN||{});
+  if(!Array.isArray(s.carryRed)) s.carryRed=[];
+  // 旧版で保存された「店の黙認に触れる一文」は、既存セーブからも取り除く
+  const OLD_SHOP=["店長は何も聞かなかった","ルール上は禁止。店は知らないことになっている","売上表を見た店長が、何も言わずにうなずいた","スタッフは、いつも通りの顔で「お疲れさま」と言った","店の記録には、規定どおりのコースとだけ書かれている","店長「……まあ、お客さんが喜んでるならね」","誰も何も言わない。それがこの店のやり方らしい","受付の子が、意味ありげに目をそらした","建前だからね","誰に向けたものかは書いていない","最近、ちょっと目立ってるよ","口コミ、書き方には気をつけて","うまくやるよ","小さくウインクした"];
+  const isOld=t=>OLD_SHOP.some(o=>String(t).includes(o));
+  for(const r of s.reports){ if(r.lines) r.lines=r.lines.filter(l=>!isOld(l.tx)); if(r.ev) r.ev=r.ev.filter(e=>!isOld(e)); }
+  s.log=s.log.filter(x=>!isOld(x.m));
+  s.scenes=(s.scenes||[]).filter(x=>!isOld(x.tx));
+  if(!s.cycle) s.cycle=1;
+  for(const r of s.reports){ if(r.red && r.red.tid==null){ const k=REDACT.findIndex(y=>y.sec===r.red.sec); r.red.tid=k<0?null:k; } }
+  if(!Array.isArray(s.scenes)) s.scenes=[];
+  if(!Array.isArray(s.reports)) s.reports=[];
+  for(const id in s.regs){
+    const g=s.regs[id], v=g.visits||1;
+    if(!g.type) g.type = R()<.5?"kind":R()<.5?"rich":"pushy";
+    if(g.tol==null) g.tol=clamp(1+v*.15,0,3);
+    if(g.trust==null) g.trust=clamp(10+v*8,0,90);
+    if(g.love==null) g.love=clamp(5+v*5,0,80);
+    if(g.visits==null) g.visits=v;
+  }
+  if(fromV1){
+    // 旧セーブ: 経験に応じて許容度を少しだけ開花させておく
+    s.ch.tol=clamp(1+Math.min(1,(s.total||0)/150),0,5);
+    s.log.push({t:s.t,m:"🆕 アップデート: 許容度・常連の信頼/本気度・日報のひとこと・非公開メモ・名場面を追加しました(記録は引き継ぎ済み)",c:"sy"});
+  }
+  if(!d.v || d.v<3){
+    // 旧方式(条件で自動解放)で読めていたものは「解放済み」として引き継ぐ
+    for(const r of s.reports){ if(r.red){ if(r.red.c==null) r.red.c=redCost(r.red); if(r.red.open==null) r.red.open=oldRedOpen(r.red,s); } }
+    s.memoRead=[]; for(let i=0;i<(s.memoMax||1);i++) s.memoRead.push(i);
+    s.pp=PP_START; s.ppLast=Date.now();
+    s.ppMoneyIdx=PP_MONEY_MS.filter(v=>(s.money||0)>=v).length;   // 既に越えた節目は対象外
+    s.repTotal=s.reports.length;
+    s.log.push({t:s.t,m:`🆕 アップデート: 伏せ字と非公開メモは${PP_NAME}で解放する方式になりました(既に読めていたものは解放済み)`,c:"sy"});
+  }
+  if(!d.v || d.v<6){
+    // 客リストの導入: 既存の常連を現在の許容度で初期化(過去の新規客は記録が無いので含まない)
+    s.cust={};
+    const gT=Math.min((CHAR_TRAITS[s.ch.id]||CHAR_TRAITS.hiyori).tolCap,s.ch.tol);
+    for(const id in s.regs){ const g=s.regs[id], cur=Math.min(gT,g.tol||0);
+      s.cust[id]={n:String(g.name).replace(/ #\d+.*$/,""),ty:g.type||"kind",pk:cur,cur,tr:g.trust||0,lv:g.love||0,v:g.visits||1,last:null,up:null}; }
+    s.custPrev=null;
+  }
+  if(!s.cust||typeof s.cust!=="object") s.cust={};
+  if(!s.custPrevCum) s.custPrev=null;
+  // 客IDが無い日記エントリは、名前で一人に特定できるものだけ紐づける(特定できないものは紐づけなし)
+  if(Array.isArray(s.diary) && s.diary.some(e=>!e.cid)){
+    const byName={}; for(const id in s.cust){ const n=s.cust[id].n; (byName[n]=byName[n]||[]).push(id); }
+    for(const e of s.diary) if(!e.cid && e.name && byName[e.name] && byName[e.name].length===1) e.cid=byName[e.name][0];
+  }   // 前日比は累計で持つ(旧形式は捨てて翌日から表示)
+  if(!d.v || d.v<4){
+    // プレイ日記・安全度の導入。過去の来店は遡及しない。既存の常連には初期状態を与える
+    s.ch.risk=clamp(5+(s.total||0)*.12,5,35);
+    s.diary=[]; s.diaryNo=0; s.diaryOpen=[];
+    for(const id in s.regs){ const g=s.regs[id]; g.stepMax=Math.floor(Math.min(g.tol,s.ch.tol)); g.loveMs=g.love>=80?2:g.love>=50?1:0; }
+    s.effRecord=Math.floor(s.ch.tol);
+    s.log.push({t:s.t,m:"🆕 アップデート: プレイ日記と安全度を追加しました(日記はこれからの来店から記録されます)",c:"sy"});
+  }
+  if(!Array.isArray(s.diary)) s.diary=[];
+  if(!Array.isArray(s.diaryOpen)) s.diaryOpen=[];
+  for(let k=0;k<DIARY_FREE_CHAPTERS;k++) if(!s.diaryOpen.includes(k)) s.diaryOpen.push(k);
+  if(typeof s.ch.risk!=="number") s.ch.risk=5;
+  if(!Array.isArray(s.memoRead)) s.memoRead=[];
+  for(let i=0;i<MEMO_FREE_PAGES;i++) if(!s.memoRead.includes(i)) s.memoRead.push(i);   // 最初から開いているページ(既存セーブにも適用)
+  if(typeof s.pp!=="number"||!isFinite(s.pp)) s.pp=PP_START;
+  if(typeof s.ppLast!=="number") s.ppLast=Date.now();
+  s.v=SAVE_VER;
+  return s;
+}
 function load(){
-  try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)); if(d&&d.v===1) return Object.assign(defState(),d);}catch(e){}
+  let raw=null;
+  try{raw=localStorage.getItem(SAVE_KEY); const d=JSON.parse(raw); if(d&&typeof d==="object"&&d.v>=1&&d.v<=SAVE_VER) return migrate(d);}
+  catch(e){ console.error(e); try{ if(raw) localStorage.setItem(SAVE_KEY+"_broken_"+Date.now(),raw); }catch(_){} }   // 読み込みに失敗したセーブは消さずに別名で退避
   return defState();
 }
 function save(){S.last=Date.now(); try{localStorage.setItem(SAVE_KEY,JSON.stringify(S));}catch(e){}}
 
 // ---------- utilities ----------
-const R = Math.random;
+function R(){return Math.random();}
 const ri = (a,b)=>a+Math.floor(R()*(b-a+1));
+const rf = (a,b)=>a+R()*(b-a);
 const pick = a=>a[Math.floor(R()*a.length)];
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 const hm = t=>{const m=((t%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");};
 const dayNo = t=>Math.floor(t/1440);
 const yen = n=>"¥"+Math.round(n).toLocaleString("ja-JP");
 const avg = a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
 const mod = t=>((t%1440)+1440)%1440;
+const r1 = v=>Math.round(v*10)/10;
 let quiet=false, offSum=null;
+const TR = ()=>CHAR_TRAITS[S.ch.id]||CHAR_TRAITS.hiyori;
+const bloomAvg = ()=>{const b=S.ch.bloom;return (b.costume+b.play+b.lead+b.receive)/4;};
+const shortName = n=>String(n).replace(/ #\d+.*$/,"");
 
 function log(msg,cls=""){
   S.log.push({t:S.t,m:msg,c:cls}); if(S.log.length>250) S.log.splice(0,S.log.length-250);
@@ -178,7 +645,7 @@ function rankBonus(){return RANKS[S.rank].bonus;}
 function ratingAvg(){return S.rating.length?avg(S.rating):3.5;}
 function grant(id){
   if(S.badges[id]) return; S.badges[id]=S.t;
-  const b=BADGES.find(x=>x[0]===id); log(`🏅 実績解除: ${b[1]} ${b[2]}`,"gd");
+  const b=BADGES.find(x=>x[0]===id); log(`🏅 実績解除: ${b[1]} ${b[2]}`,"gd"); ppAdd(PP_REWARD.badge,"実績");
 }
 
 // ---------- simulation (1 game minute) ----------
@@ -186,20 +653,19 @@ function step(){
   S.t++;
   const m=mod(S.t);
   const wd=new Date(2026,0,4+dayNo(S.t)).getDay(); // 0=日
-  // 日付変更の前処理(11:00に新しい「日」が始まる)
   if(m===11*60) newDay(wd);
 
-  // シフト終了判定(深夜3時以降、待機/休憩に戻った時点で退勤)
   if(["wait","rest"].includes(S.st) && m>=3*60 && m<11*60) endShift(false);
   const st=S.st;
-  // 状態ごとの消耗/回復
-  const d={sleep:[.22,.08],off:[.02,.05],dayoff:[.05,.1],prep:[0,0],wait:[-.02,-.01],move:[-.05,-.02],work:[-.11,-.05],back:[-.05,-.01],rest:[.15,.12],home:[-.02,0]}[st]||[0,0];
-  S.hp=clamp(S.hp+d[0],0,100); S.mp=clamp(S.mp+d[1]*(S.weather==="雨"&&st!=="sleep"?.6:1),0,100);
+  // 状態ごとの消耗/回復 [体力, メンタル]。ひよりは素質型なので、通常の勤務ではメンタルがほとんど減らない
+  const d={sleep:[.22,.08],off:[.02,.05],dayoff:[.05,.1],prep:[0,0],wait:[-.02,-.004],move:[-.05,-.005],work:[-.11,-.01],back:[-.05,-.003],rest:[.15,.12],home:[-.02,0]}[st]||[0,0];
+  const hm_=(holidayNow()&&(st==='sleep'||st==='dayoff'))?HOLIDAY_REST_MULT:1;
+  S.hp=clamp(S.hp+d[0]*hm_,0,100); S.mp=clamp(S.mp+d[1]*hm_*(S.weather==="雨"&&st!=="sleep"&&d[1]>0?.6:1),0,100);
 
   switch(st){
-    case "sleep": if(m===11*60){ setSt(S.isOff?"dayoff":"off"); S.sub=pick(OFFACTS); log(S.isOff?"🌿 今日はお休み。ゆっくり過ごす":"☀️ 起床。"+S.sub.replace("している","する予定"),"sy"); } break;
+    case "sleep": if(m===11*60){ setSt(S.isOff?"dayoff":"off"); S.sub=S.sickToday?"通院・休養している":pick(OFFACTS); log(holidayNow()?"🌙 お休み":S.isOff?"🌿 今日はお休み。ゆっくり過ごす":"☀️ 起床。"+S.sub.replace("している","する予定"),"sy"); } break;
     case "off": case "dayoff":
-      if(m%120===0) S.sub=pick(OFFACTS);
+      if(m%120===0) S.sub=S.sickToday?"通院・休養している":pick(OFFACTS);
       if(st==="off" && m===17*60+30){ setSt("prep",30); log("💄 出勤準備を始めた"); }
       if(m===2*60){ setSt("sleep"); log("😴 就寝","sy"); }
       break;
@@ -207,88 +673,475 @@ function step(){
     case "wait": waitTick(m,wd); break;
     case "move": if(S.t>=S.stEnd){ setSt("work",S.cur.m); log(`⏳ 接客開始 (${S.cur.m}分コース / ${S.cur.name})`); } break;
     case "work": if(S.t>=S.stEnd) finishWork(); break;
-    case "back":
-      if(S.t>=S.stEnd){ setSt("wait"); checkTired(); }
-      break;
-    case "rest":
-      if(S.t>=S.stEnd){ setSt("wait"); log("📱 休憩終了、待機に戻った"); }
-      break;
+    case "back": if(S.t>=S.stEnd){ setSt("wait"); checkTired(); } break;
+    case "rest": if(S.t>=S.stEnd){ setSt("wait"); log("📱 休憩終了、待機に戻った"); } break;
     case "home": if(S.t>=S.stEnd){ setSt("sleep"); log("😴 帰宅して就寝","sy"); } break;
   }
-  // ランダムイベント
-  if(["wait","off","dayoff"].includes(S.st) && R()<0.0025) randomEvent();
-  // クールダウン
+  if(["wait","off","dayoff"].includes(S.st) && !holidayNow() && R()<0.0025) randomEvent();
   for(const k in S.cd) if(S.cd[k]>0) S.cd[k]--;
 }
 
 function newDay(wd){
   S.days++;
-  S.isOff = S.offTomorrow || wd===3; S.offTomorrow=false;
+  dailyHealth();
+  custDaily();
+  S.shop.heat=clamp(S.shop.heat-(S.isOff?4:2.5)+RUMOR_HEAT*(S.rumor||0)/100,0,100);
+  rumorDaily();
+  S.sickToday = S.sickDays>0;
+  const hol=isHoliday(dayNo(S.t));
+  S.isOff = S.offTomorrow || wd===3 || S.sickDays>0 || hol; S.offTomorrow=false;
+  if(S.sickDays>0){ S.sickDays--; log(`🏥 体調不良のため休養中${S.sickDays>0?`(あと${S.sickDays}日)`:"(明日から復帰予定)"}`,"bd"); }
   S.weather = R()<.22?"雨":(R()<.3?"くもり":"晴れ");
   S.demand = (wd===5||wd===6?1.35:wd===0?1.1:1) * (S.weather==="雨"?.8:1);
-  S.day={n:dayNo(S.t),sales:0,count:0,nom:0,ratings:[],ev:[],start:null,early:false,goalHit:false};
+  S.day=defDay(dayNo(S.t));
+  // 隠し数値の自然な変化
+  const c=S.ch;
+  c.loose=clamp(c.loose-(S.isOff?3:1.2),0,100);
+  c.numb=clamp(c.numb-(S.isOff?1:.4),0,100);
+  c.duty=clamp(c.duty-6,0,100);
+  c.push=c.push>0?Math.max(0,c.push-.5):Math.min(0,c.push+.5);
+  if(hol){   // 休養効果のみ。許容度や体調への悪影響・揺れはなし
+    c.loose=clamp(c.loose-HOLIDAY_REC.loose,0,100); c.numb=clamp(c.numb-HOLIDAY_REC.numb,0,100); c.risk=clamp(c.risk-HOLIDAY_REC.risk,0,100);
+    S.reports.unshift({day:S.day.n,date:dateStr(S.day.n),holiday:true}); if(S.reports.length>30) S.reports.pop();
+  }
+  if(S.isOff) S.streak=0;
   if(S.days>=7) grant("week");
+}
+function rumorDaily(){
+  S.rumor=clamp((S.rumor||0)*(1-RUMOR_DECAY),0,100);
+  const v=S.rumor, st=Math.floor(v/RUMOR_HINT.step);
+  if(st<S.rumorStep) S.rumorStep=st;            // 下がったら、次に越えたときまた気づける
+  if(v<RUMOR_HINT.min) return;
+  const crossed=st>S.rumorStep;
+  if(R()<(crossed?.6:0)+RUMOR_HINT.p*v/100){
+    if(crossed) S.rumorStep=st;
+    let i; do{ i=ri(0,RUMOR_HINTS.length-1); }while(i===S.rumorLast && RUMOR_HINTS.length>1);
+    S.rumorLast=i; S.rumorN.hint++; log(RUMOR_HINTS[i],"ev");
+  }
 }
 function startShift(){
   setSt("wait"); S.day.start=S.t;
-  log(`🟢 出勤しました (${S.weather==="雨"?"☔ 雨":S.weather})`,"gd");
+  S.streak = (S.lastWork===S.day.n-1) ? S.streak+1 : 1; S.lastWork=S.day.n;
+  log(`🟢 出勤しました (${S.weather==="雨"?"☔ 雨":S.weather})${S.streak>=3?` 連続${S.streak}日目`:""}`,"gd");
   grant("first"); if(S.weather==="雨") grant("rain");
 }
 function waitTick(m,wd){
-  // 時間帯で需要変化
   const h=Math.floor(m/60);
   const tm = h>=20&&h<=24||h===0 ? 1.4 : h>=1&&h<3 ? .9 : .8;
   const rk = 1+S.rank*.15;
-  const p = .016*tm*rk*S.demand*(0.7+ratingAvg()/10);
+  const p = .016*tm*rk*S.demand*(0.7+ratingAvg()/10)*(1+S.ch.tol*.04)*(1+RUMOR_DEMAND*(S.rumor||0)/100);
   if(R()<p) newBooking(false);
   else checkTired();
+}
+function pickType(){
+  let x=R(), acc=0;
+  for(const k in CTYPES){acc+=CTYPES[k].w; if(x<acc) return k;}
+  return "kind";
 }
 function newBooking(forceReg){
   const regIds=Object.keys(S.regs);
   let reg = forceReg || (regIds.length && R()< Math.min(.65,.15+regIds.length*.04));
-  let name, id;
-  if(reg && regIds.length){ id=pick(regIds); name=S.regs[id].name; }
-  else { reg=false; id="c"+(S.nextCust++); name=String.fromCharCode(65+ri(0,25))+"様 #"+id.slice(1)+"(新規)"; }
+  let name, id, type, tol;
+  if(reg && regIds.length){
+    // 本気度が高い常連ほど予約しやすい
+    const ws=regIds.map(i=>1+(S.regs[i].love||0)/25), tot=ws.reduce((a,b)=>a+b,0);
+    let x=R()*tot; id=regIds[regIds.length-1];
+    for(let i=0;i<regIds.length;i++){x-=ws[i]; if(x<=0){id=regIds[i];break;}}
+    const g=S.regs[id]; name=g.name; type=g.type; tol=g.tol;
+  } else {
+    reg=false; id="c"+(S.nextCust++); type=pickType();
+    name=String.fromCharCode(65+ri(0,25))+"様 #"+id.slice(1)+"(新規)";
+    tol=rf(...CTYPES[type].tol0);
+    S.rumorN.newCust++;
+    // 噂を聞いて「誰でもOK」だと思って来る客(押しが強い/デリカシーのないタイプ)
+    if(R()<RUMOR_MIS_MAX*(S.rumor||0)/100){ type=R()<.6?"pushy":"bad"; tol=rf(...CTYPES[type].tol0); var mis=true; S.rumorN.mis++; }
+  }
   const c=COURSES[R()<.55?0:R()<.7?1:2];
   const mv=ri(15,30)+(S.weather==="雨"?10:0);
-  S.cur={id,name,reg,m:c.m,p:c.p};
+  const sub = type==="bad"?pick(CTYPES.bad.subs):null;
+  S.cur={id,name,reg,m:c.m,p:c.p,type,tol,sub:type==="bad"?(sub||pick(CTYPES.bad.subs)):sub,mis:!!mis};
   setSt("move",mv);
   log(`📞 予約が入った ${reg?"【指名】":""}${name} / ${c.m}分 → 移動 ${mv}分`, reg?"gd":"");
 }
+function pickReason(trust,type){
+  const c=S.ch;
+  if(c.duty>0 && R()<c.duty/100) return "duty";       // 義務感は借金・トラブルのときだけ
+  let p=.35+trust/120+bloomAvg()*.4+(type==="kind"?.15:0)+(type==="pushy"?-.1:0);
+  if(c.free) p*=.5;
+  return R()<clamp(p,.05,.95)?"trust":"habit";
+}
 function finishWork(){
-  const c=S.cur;
-  let r = 3.3 + (S.hp-50)/80 + (S.mp-50)/70 + S.rank*.08 + (R()-.5)*1.4 + (c.reg?.3:0);
+  const c=S.cur, T=TR(), ch=S.ch;
+  const g=S.regs[c.id];
+  const type=(g&&g.type)||c.type||"kind", ty=CTYPES[type]||CTYPES.kind;
+  const custTol=g?g.tol:(c.tol!=null?c.tol:1);
+  const trust=g?g.trust:0;
+  // 実効許容度: 全体(上限と現在値の小さい方) と お客さんごとの値 の小さい方
+  const gTol=Math.min(T.tolCap,ch.tol);
+  let eff = ch.free ? gTol : Math.min(gTol,custTol);
+  // 許容度が高いひよりは、新規でも雰囲気が良ければ許す(リピート狙いの打算もある)。デリカシーのない客は許さない
+  const rel=relOf(g); let vibe=null;
+  if(rel==="new" && gTol<REL_MIN_TOL && !ch.free && (type==="kind"||type==="rich") && S.mp>=50 && R()<IRREG_LV4_P){
+    vibe="irreg"; eff=rf(4.0,4.3);   // その夜だけ。全体の許容度は大きく動かさない
+  }
+  else if(rel==="new" && gTol>=REL_MIN_TOL && !ch.free){
+    // 新規の上限: 雰囲気が良く気遣いのある人なら最大Lv4、デリカシーのない人は0〜1
+    const pGood=(.42+bloomAvg()*.3+(S.mp-50)/200+(gTol-2.5)*.12)*(type==="pushy"?.5:1);
+    if(type==="bad" || (type==="pushy" && R()<.35)){ vibe="rude"; eff=Math.min(eff,1); }
+    else if(R()<pGood){ vibe="good"; eff=Math.max(eff,Math.min(gTol,NEW_MAX_TOL)*rf(.92,1)); }
+    else { vibe="ok"; eff=Math.max(eff,Math.min(gTol,rf(1.8,3.4))); }
+  }
+  // 壁: 勘違い客(初回)と、一度壁にぶつかった常連は0〜1に抑える。紳士的な客は従来どおり
+  if(c.mis || (g && g.wall && g.type!=="bad" && g.tol<1.5)){ vibe="wall"; eff=Math.min(eff,rf(.2,1)); }
+  // Lv4経験のある客: 全体の許容度や調子が低くても、ほぼ毎回Lv4以上(デリカシーのない夜・苦手なお客さんは対象外)
+  let lv4rep=null;
+  { const xc=S.cust[c.id];
+    if(xc && (xc.pn??(xc.irr!=null?0:xc.pk))>=LV4_REPEAT_MIN && type!=="bad" && vibe!=="rude" && vibe!=="irreg" && vibe!=="wall"){
+      if(R()<LV4_REPEAT_P){ lv4rep="fix"; eff=Math.max(eff,rf(LV4_REPEAT_MIN,NEW_MAX_TOL)); } else lv4rep="miss";
+    } }
+  if(type==="bad") eff=Math.min(eff,1);   // 生理的に無理な客は常に0〜1
+  // Lv5(ここから先すべて)は、特別な相手か、仲良しの一部だけ
+  if(eff>=4.5 && !(rel==="deep" || (rel==="close" && R()<.3))) eff=Math.min(eff,NEW_MAX_TOL);
+  const reason = type==="bad" ? "duty_bad" : pickReason(trust,type);
+  const rsn = reason==="duty_bad"?(ch.duty>0&&R()<ch.duty/100?"duty":"habit"):reason;
+  const pre={tol:ch.tol,love:g?g.love:0};
+
+  // 評価
+  let r = 3.3 + (S.hp-50)/80 + (S.mp-50)/70 + S.rank*.08 + (R()-.5)*1.4 + (c.reg?.3:0)
+        + eff*.07 + ch.bloom.costume*.15 + ty.rate + (rsn==="trust"?.1:0);
+  if(vibe==="rude"||vibe==="wall") r-=.6;   // 許してもらえなかった分、お客さんの満足度は下がる
   r = Math.round(clamp(r,1,5)*10)/10;
-  const nom = c.reg?2000:0;
-  const pay = (c.p*(.55+rankBonus()))+nom;
+  // 売上
+  const nom = c.reg?Math.round(2000+eff*1000):0;
+  const pay = Math.round(c.p*(.55+rankBonus())*ty.sales*(1+eff*.12)*(ch.free?1.2:1))+nom;
   S.money+=pay; S.day.sales+=pay; S.totalSales+=pay; S.day.count++; S.total++;
   if(c.reg) S.day.nom++;
   S.rating.push(r); if(S.rating.length>40) S.rating.shift();
   S.day.ratings.push(r);
-  S.mp=clamp(S.mp+(r>=4.5?4:r<3?-6:0),0,100);
+
+  // 消耗: 体力は通常どおり。メンタルは苦手なお客さんのときだけ大きく減る
+  S.hp=clamp(S.hp-eff*.8,0,100);
+  let dmp=0, note="";
+  if(type==="bad"){
+    dmp = -(10+ri(0,6))*(1-T.drainResist*.25);
+    note=`😣 苦手なタイプのお客さんだった(${c.sub||"乱暴な客"})`;
+    S.day.bad++;
+  } else if(rsn==="trust"){
+    dmp = R()<.6 ? rf(1,4)*(.5+bloomAvg()) : 0;
+    if(dmp>=2) note="🌸 楽しそうに戻ってきた";
+  } else if(rsn==="duty"){
+    dmp = -(3+eff*1.5)*(1-T.drainResist*.5);
+    note="💭 少し無理をしているように見えた";
+  } else { // 慣れ
+    dmp = -.3;
+    ch.numb=clamp(ch.numb+T.numbRate*(.5+eff*.2),0,100);
+  }
+  if(type==="pushy" && trust<40) dmp-=1*(1-T.drainResist*.5);
+  if(r>=4.5) dmp+=3; else if(r<3 && type!=="bad") dmp-=1.5;
+  S.mp=clamp(S.mp+dmp,0,100);
+  S.day.reasons[rsn]++;
+  S.day.effMax=Math.max(S.day.effMax,eff); S.day.effSum+=eff;
+
   log(`✅ 接客終了 評価 ★${r.toFixed(1)} / 手取り ${yen(pay)}`, r>=4?"gd":r<3?"bd":"");
+  if(note) log(note+(Math.abs(dmp)>=1?` (メンタル ${dmp>0?"+":""}${Math.round(dmp)})`:""), type==="bad"||rsn==="duty"?"bd":"gd");
   if(r>=5) grant("star5");
-  // 常連化
-  if(S.regs[c.id]) S.regs[c.id].visits++;
-  else if(r>=4 && R()<.35){ S.regs[c.id]={name:c.name.replace("(新規)","(常連)"),visits:1}; log(`🤝 ${c.name.replace("(新規)","")} がリピーターになった`,"gd"); }
+
+  // 許容度の開花(本人の素質と信頼で少しずつ。見守りアクションは後押し/抑制のみ)
+  if(type!=="bad"){
+    const before=ch.tol;
+    let gr = T.growth*.018*(.5+bloomAvg())*(rsn==="trust"?1.3:rsn==="duty"?1:.7)*(1+(ty.tolGain-1)*.3)*(1.25-ch.tol/T.tolCap*.6);
+    gr *= ch.push>0?1.6:ch.push<0?.2:1;
+    if(vibe!=="irreg" && eff>=ch.tol-.6) ch.tol=clamp(ch.tol+gr,0,T.tolCap);
+    if(eff>=4){
+      ch.lv4n=(ch.lv4n||0)+1;
+      const add=LV4_GROW.base/(1+ch.lv4n*LV4_GROW.decay);
+      if(g && g.trust>=LV4_GROW.trustLine && vibe!=="irreg") ch.tol=clamp(ch.tol+add,0,T.tolCap);   // 自信
+      else { ch.tol=clamp(ch.tol+add*(1-LV4_GROW.habitShare),0,T.tolCap); ch.numb=clamp(ch.numb+add*LV4_GROW.numbK*T.numbRate,0,100); }   // 慣れ寄り
+    }
+    for(const k in ch.bloom) ch.bloom[k]=clamp(ch.bloom[k]+.006*T.growth*(T.apt[k]-ch.bloom[k])*(rsn==="trust"?1.3:1),0,1);
+    if(Math.floor(ch.tol*2)>Math.floor(before*2)){ log(`🔓 ひよりの許容度が ${r1(ch.tol).toFixed(1)} になった`,"ev"); S.day.tolUp=true; }
+    if(ch.tol>=2) grant("tol2"); if(ch.tol>=4) grant("tol4");
+    // 境界線のゆるみ
+    ch.loose=clamp(ch.loose+.35*eff*T.looseRate*(ch.push>0?1.4:ch.push<0?.4:1)*(rsn==="habit"?1.3:1),0,100);
+  }
+
+  // 常連の更新 / 常連化
+  if(g){
+    g.visits++;
+    const tg=ty.trust*ri(4,8)*(ch.free?.5:1)*(rsn==="trust"?1.2:1);
+    g.trust=clamp(g.trust+tg,0,100);
+    g.love=clamp(g.love+ri(1,5)*ty.love*(.5+g.trust/100)*(ch.free?.6:1),0,100);
+    const bt=g.tol, breadth=(ch.bloom.lead+ch.bloom.receive)/2;
+    g.tol=clamp(g.tol+.12*ty.tolGain*(.4+g.trust/100)*(.5+breadth)*(ch.push>0?1.4:ch.push<0?.3:1),0,ty.tolMax);
+    if(eff>g.tol && vibe!=="irreg") g.tol=Math.min(eff,ty.tolMax);
+    if(vibe==="wall"||vibe==="rude"){ g.wall=true; g.tol=Math.max(0,bt-.45); g.love=Math.max(0,g.love-6); g.trust=Math.max(0,g.trust-5); }   // 壁にぶつかると、その客への許容度は下がり離れていく   // 雰囲気で許した分は、その人への許容度として残る
+    if(Math.floor(g.tol)>Math.floor(bt)) log(`🔓 ${shortName(g.name)}への許容度が ${Math.floor(g.tol)} に上がった`,"ev");
+    if(g.trust>=80) grant("trust80");
+    S.day.regs[c.id]=(S.day.regs[c.id]||0)+1;
+  } else if(type!=="bad" && r>=4 && R()<.35){
+    S.regs[c.id]={name:c.name.replace("(新規)","(常連)"),visits:1,type,tol:clamp((vibe==="irreg"?custTol:Math.max(custTol,eff))+.1,0,ty.tolMax),trust:ri(8,16),love:ri(3,10)};
+    if(vibe==="wall"||vibe==="rude"){ const ng=S.regs[c.id]; ng.wall=true; ng.tol=Math.min(ng.tol,Math.max(0,eff-.3)); }
+    log(`🤝 ${c.name.replace("(新規)","")} がリピーターになった (${ty.l})`,"gd");
+    S.day.regs[c.id]=1;
+  }
+  // 体調リスク: 許容度・境界線のゆるみ・来店数で少しずつ溜まる。信頼している常連なら上がり方が小さい
+  const trustF = g ? 1-clamp(g.trust,0,100)/100*.6 : 1;
+  // 許容度が高いほど、特に新規ほど下がりやすい。Lv5相当はさらに
+  const LV_RISK=[.3,.5,.8,1.2,1.8,3.0];
+  ch.risk=clamp(ch.risk+.9*T.riskRate*LV_RISK[lvOf(eff)]*(1+ch.loose/100)*trustF*(lv4rep==="fix"?LV4_REPEAT_RISK:rel==="new"?1.6:1)*(type==="bad"?1.4:1),0,100);
+  // お店の注意リスク(隠し): 許容度の高い夜や境界線のゆるみで溜まる。「目立たないように」中は溜まりにくい
+  if(eff>=2) S.shop.heat=clamp(S.shop.heat+(eff-1.5)*2.2*(1+ch.loose/80)*(S.t<S.shop.lowKeyUntil?.35:1)*(ch.free?1.5:1),0,100);
+  if(vibe==="wall"||vibe==="rude") S.rumorN.wall++;
+  // 噂: 主に新規・一見の客から。常連は秘密にしたい人が多く、ごくたまに「書く人」がいるだけ
+  { const L=cLv(r1(eff)); if(L>=4){ const base=L>=5?RUMOR_ADD.lv5:RUMOR_ADD.lv4, room=1-(S.rumor||0)/120;
+      if(!g){ const a=base*room; S.rumor=clamp((S.rumor||0)+a,0,100); S.rumorN.fromNew+=a; }
+      else if(R()<RUMOR_REG_P){ const a=base*RUMOR_REG_K*room; S.rumor=clamp((S.rumor||0)+a,0,100); S.rumorN.fromReg+=a; } } }
+  addDiary(c,type,g,eff,r,rsn,pre,rel,vibe,lv4rep);
+  updateCust(c,type,eff,vibe);
   S.cur=null; setSt("back",ri(15,25));
   checkBadges(); checkRank();
   if(S.goal && !S.day.goalHit && S.day.sales>=S.goal){ S.day.goalHit=true; S.mp=clamp(S.mp+12,0,100); log(`🏁 本日の目標 ${yen(S.goal)} 達成!`,"gd"); grant("goal"); }
+}
+// ---------- 客リスト ----------
+const lvOf = v=>clamp(Math.round(v),0,5);          // 安全度・日記の温度用(四捨五入)
+const cLv = v=>clamp(Math.floor(v+1e-6),0,5);      // 客サマリー用(切り捨て。Lv4=4.0以上)
+function custCur(id,x){ const g=S.regs[id]; if(!g) return x.cur; const v=Math.min(TR().tolCap,S.ch.tol,g.tol); return relOf(g)==="deep"?v:Math.min(v,NEW_MAX_TOL); }
+function updateCust(c,type,eff,vibe){
+  const id=c.id, g=S.regs[id], d=dayNo(S.t);
+  let x=S.cust[id];
+  if(!x){ x=S.cust[id]={n:shortName(c.name.replace("(新規)","").replace("(常連)","")),ty:type,pk:0,cur:0,tr:0,lv:0,v:0,last:null,up:null}; }
+  x.v++; x.last=d; x.cur=r1(eff);
+  // 到達点は上がったときだけ更新。2回目以降の来店でレベルが上がったら「今月進んだ」の目印用に日付を残す
+  if(eff>x.pk){ if(x.v>1 && cLv(eff)>cLv(x.pk) && cLv(eff)>=1) x.up=d; x.pk=Math.floor(eff*10)/10; }
+  if(vibe==="irreg") x.irr=d; else x.pn=Math.max(x.pn??0,Math.floor(eff*10)/10);   // pn=イレギュラーを除いた到達点(離れかけ判定用)
+  if(g){ x.tr=g.trust; x.lv=g.love; x.v=Math.max(x.v,g.visits); custPeak(id,x,d); }
+  const ids=Object.keys(S.cust);
+  if(ids.length>CUST_MAX){
+    const old=ids.filter(i=>!S.regs[i]).sort((a,b)=>(S.cust[a].last??-1)-(S.cust[b].last??-1));
+    for(const i of old.slice(0,ids.length-CUST_MAX)) delete S.cust[i];
+  }
+}
+// 常連は「今その人に許せる値」が到達点を超えたら到達点も上げる(上がったときだけ)
+function custPeak(id,x,d){ const cur=custCur(id,x); if(cur>x.pk+.05){ if(x.v>1 && cLv(cur)>cLv(x.pk) && cLv(cur)>=1) x.up=d; x.pk=Math.floor(cur*10)/10; } if(cur>(x.pn??0)) x.pn=Math.floor(cur*10)/10; }
+function custCounts(){ const n=[0,0,0,0,0,0]; for(const id in S.cust) n[cLv(S.cust[id].pk)]++; return n; }
+// 累計: cum[L] = 到達点がLv.L以上の人数(cum[0]=全員)
+function custCum(){ const n=custCounts(), c=[0,0,0,0,0,0]; for(let L=5,a=0;L>=0;L--){ a+=n[L]; c[L]=a; } return c; }
+// 常連が長く来ないと、少しずつ距離ができる(許容度が下がる=離れかけ)
+function custDaily(){
+  const d=dayNo(S.t);
+  for(const id in S.regs){ const g=S.regs[id], x=S.cust[id]; if(!x||x.last==null) continue;
+    if(!isHoliday(d) && workDaysBetween(x.last,d,12)>12){ g.tol=Math.max(0,g.tol-.04); g.love=Math.max(0,g.love-.3); } }
+  for(const id in S.regs){ const x=S.cust[id]; if(x) custPeak(id,x,d); }
+  S.custPrev=custCum(); S.custPrevCum=true;
+}
+
+// ---------- プレイ日記 ----------
+function tolBand(e){ return e<1.5?"low":e<2.5?"mid":e<3.5?"high":"max"; }   // 四捨五入したレベル: 0-1 / 2 / 3 / 4-5
+function dropDuty(lines){ for(let i=lines.length-1;i>0;i--) if(DIARY_EXTRA.duty.includes(lines[i])) lines.splice(i,1); }
+function addDiary(c,type,g,eff,r,rsn,pre,rel="reg",vibe=null,lv4rep=null){
+  const ch=S.ch, flags=[];
+  if(Math.floor(ch.tol*2)>Math.floor(pre.tol*2)) flags.push("tolup");
+  const fl=Math.floor(eff);
+  if(fl>=2 && fl>(S.effRecord||0)){ flags.push("step"); S.effRecord=fl; }
+  else if(g && fl>=2 && fl>Math.max(g.stepMax||0, S.cust[c.id]?Math.floor(S.cust[c.id].pk+1e-6):0)) flags.push("step");   // 常連になる前の到達点も考慮
+  if(g){ g.stepMax=Math.max(g.stepMax||0,fl);
+    const ms=g.love>=80?2:g.love>=50?1:0; if(ms>(g.loveMs||0)){ flags.push(ms===2?"love80":"love50"); g.loveMs=ms; } }
+  const pool=DIARY_LINES[type]||DIARY_LINES.kind;
+  const band=tolBand(eff);
+  const lines=[pick(pool[band])];
+  if(eff>=4.5 && type!=="bad" && R()<.5) lines.push(pick(DIARY_LV5));
+  for(const f of flags){ const t=DIARY_FLAG[f].tx; if(t.length && R()<.8) lines.push(pick(t)); }
+  // 素質型: 楽しんでいる言葉が多め
+  const hsBase = {kind:82,pushy:70,rich:64,bad:18}[type]??60;
+  const hs = Math.round(clamp((vibe==="rude"||vibe==="wall"?-25:0) + hsBase + bloomAvg()*20 + (rsn==="trust"?8:rsn==="duty"?-15:0) + (S.mp-60)/6 + rf(-10,10),0,100));
+  const cs = Math.round(clamp((r-1)/4*100 + rf(-6,6),0,100));
+  if(type!=="bad"){
+    if(rsn==="duty" && R()<.7) lines.push(pick(DIARY_EXTRA.duty));
+    else if(ch.free && R()<.5) lines.push(pick(DIARY_EXTRA.free));
+    else if(S.hp<30 && R()<.5) lines.push(pick(DIARY_EXTRA.tired));
+    else if(hs>=75 && band!=="max" && R()<.45) lines.push(pick(DIARY_EXTRA.enjoy));
+  }
+  // 関係性別のトーン(許容度の帯が高いときだけ)
+  const relNow=g?relOf(g):rel;
+  const dL=cLv(r1(eff)), dBand=dL>=4?"max":dL>=3?"high":dL>=2?"mid":"low";   // 表示レベル(切り捨て)の帯。軽薄なノリ(close.max)はLv4以上専用
+  if(vibe==="irreg"){ lines[0]=pick(DIARY_IRREG); flags.push("irreg"); }
+  else if(vibe==="rude"){ lines.length=0; lines.push(pick(DIARY_REL.newRude)); if(R()<.4) lines.push(pick(DIARY_WALL)); }
+  else if(vibe==="wall"){ lines.length=0; lines.push(pick(DIARY_WALL)); if(c.mis||R()<.5) lines.push(pick(DIARY_EXPECT)); }
+  else if(vibe==="good" && cs>=65){ dropDuty(lines); lines.push(pick(DIARY_REL.newGood[dBand==="low"?"mid":dBand])); }
+  else if((relNow==="close"||relNow==="deep") && (dBand==="high"||dBand==="max") && DIARY_REL.close[type]){
+    // 仲良しの相手とは、軽いノリが主役。義務感の一言は混ぜない
+    dropDuty(lines); lines[0]=pick(DIARY_REL.close[type][dBand]);
+    if(relNow==="deep" && R()<.5) lines.push(pick(DIARY_REL.deep));
+  }
+  // Lv5の夜専用の一言。「書かない」系の締めが重ならないよう、他の締めの文は外す
+  if(dL>=5 && type!=="bad" && vibe!=="rude" && vibe!=="irreg" && R()<LV5_NIGHT_P){
+    const t=pick(DIARY_LV5_NIGHT); lines[0]=t;
+    const closing=/書かない|ここまで|残さない|全部消した|私だけが知って/;
+    if(closing.test(t)){ for(let i=lines.length-1;i>0;i--) if(closing.test(lines[i])) lines.splice(i,1); }
+    else { let seen=false; for(let i=lines.length-1;i>0;i--) if(DIARY_LV5.includes(lines[i])){ if(seen) lines.splice(i,1); seen=true; } }
+  }
+  if(lv4rep==="miss" && eff<LV4_REPEAT_MIN){ dropDuty(lines); lines.push(pick(DIARY_NOMOOD)); }
+  // 記号は本文に混ぜず、記録時に mk として保存(新しい記録だけ。旧エントリには無い)
+  const mk=playMarks(dL);
+  const ty=CTYPES[type]||CTYPES.kind;
+  S.diary.push({no:S.diaryNo++,day:dayNo(S.t),date:dateStr(dayNo(S.t)),time:hm(S.t-c.m),cid:c.id,name:shortName(c.name.replace("(新規)","").replace("(常連)","")),reg:!!c.reg,type,cs,hs,tol:r1(eff),lines,flags,rel:relNow,vibe,rep:lv4rep,mk});
+  if(S.diary.length>DIARY_MAX) S.diary.splice(0,S.diary.length-DIARY_MAX);
+}
+const chapOf = no=>Math.floor(no/DIARY_CHAPTER);
+function chapEntries(k){ return S.diary.filter(e=>chapOf(e.no)===k); }
+function chapHasFlag(k){ return chapEntries(k).some(e=>e.flags&&e.flags.length); }
+function chapFull(k){ return (k+1)*DIARY_CHAPTER<=S.diaryNo; }
+function costDiary(k){ return TEST_COST_ONE?1:(chapHasFlag(k)?COST_TABLE_ORIGINAL.diary.milestone:COST_TABLE_ORIGINAL.diary.base); }
+function chapOpen(k){ return k<DIARY_FREE_CHAPTERS || S.diaryOpen.includes(k); }
+function unlockDiary(k){
+  if(chapOpen(k)||!chapFull(k)) return;
+  const c=costDiary(k); if(S.pp<c) return;
+  S.pp-=c; S.diaryOpen.push(k); log(`📖 プレイ日記 第${k+1}章を開いた (${PP_NAME} -${c})`,"sy"); save(); render(true);
+}
+// ---------- 体調(安全度) ----------
+function dailyHealth(){
+  const c=S.ch;
+  c.risk=clamp(c.risk-.3,0,100);
+  if(S.sickDays>0 || isHoliday(dayNo(S.t))) return;
+  if(c.risk>50 && R()<(c.risk-50)/150){
+    S.sickDays=ri(2,4); c.risk=clamp(c.risk-20,0,100); S.hp=clamp(S.hp-25,0,100); S.mp=clamp(S.mp-8,0,100);
+    log(`🏥 体調不良。通院して、${S.sickDays}日ほど休養することになった`,"bd");
+  }
 }
 function checkTired(){
   if(S.st!=="wait") return;
   if(S.hp<12 || S.mp<10){ log("⚠️ 限界に近いので早退することにした","bd"); endShift(true); return; }
   if(S.hp<28 || S.mp<25){ setSt("rest",ri(30,50)); log("🍵 疲れたので休憩に入った"); }
 }
+
+// ---------- 日報のひとこと生成 ----------
+function fill(s,ctx){return s.replace("{name}",ctx.name||"あの人").replace("{visits}",ctx.visits||"").replace("{streak}",S.streak);}
+function chooseTone(d){
+  const r=d.reasons, c=S.ch;
+  if(S.hp<30 || (d.bad && S.mp<55) || S.streak>=6 || r.duty>=2 || S.mp<35) return "tired";
+  if(c.free || c.numb>40 || (r.habit>r.trust && r.habit>=2 && R()<.5)) return "dry";
+  if(d.effMax>=2.5 && S.mp>=50 && (c.push>0 || R()<.45+(d.effMax-2.5)*.15)) return "bold";
+  if(r.trust>=Math.max(1,r.habit) && S.mp>=60) return "happy";
+  return "calm";
+}
+function makeHitokoto(d){
+  // その日いちばん会った常連
+  let top=null,tc=0; for(const id in d.regs){ if(d.regs[id]>tc&&S.regs[id]){tc=d.regs[id];top=id;} }
+  const g=top?S.regs[top]:null;
+  const ctx={name:g?shortName(g.name):null,visits:g?g.visits:0};
+  const tone=chooseTone(d);
+  let pool=LINES[tone];
+  if(tone==="happy"&&!g) pool=pool.filter(x=>!x.includes("{name}"));
+  if(tone==="tired"&&S.streak<3) pool=pool.filter(x=>!x.includes("{streak}"));
+  const lines=[{tone,tx:fill(pick(pool),ctx)}];
+  // 2行目: 状況に応じた一文
+  let extra=null;
+  if(S.ch.free && R()<.6) extra={tone:"dry",tx:pick(FREE_LINES)};
+  else if(d.ratings.includes(5) && R()<.35) extra={tone:"bold",tx:pick(STAR_LINES)};
+  else if(d.bad && R()<.7) extra={tone:"tired",tx:pick(BAD_LINES)};
+  else if(d.reasons.duty && R()<.7) extra={tone:"tired",tx:pick(DUTY_LINES)};
+  else if(g && !S.ch.free && (tc>=2 || S.lastTopReg===top || g.visits>=5)) extra={tone:"happy",tx:fill(pick(REL_LINES),ctx)};
+  if(extra && extra.tx!==lines[0].tx) lines.push(extra);
+  if(S.pendingCheck){ lines.push({tone:"calm",tx:pick(CHECK_LINES)}); S.pendingCheck=false; }
+  S.lastTopReg=top;
+  // 伏せ字
+  let red=null;
+  if(d.count>0){
+    let cand=REDACT.filter(x=>x.k==="tol"||g);
+    const x=pick(cand);
+    red={pre:fill(x.pre,ctx),sec:fill(x.sec,ctx),post:fill(x.post,ctx),k:x.k,c:x.c,open:false,tid:REDACT.indexOf(x)};
+  }
+  return {lines,red};
+}
+// 周回をまたいだ引き継ぎ: 前の周回で開いた伏せ字の内容(ID)は、新しい周回で出てきたときも開いている
+function redOpen(red){ return !!(red && (red.open || (red.tid!=null && S.carryRed.includes(red.tid)))); }
+// 旧バージョン(v2)の自動解放条件。移行時の判定にだけ使う
+function oldRedOpen(red,st){
+  if(red.v==null) return false;
+  if(red.k==="tol") return st.ch.tol>=red.v;
+  const g=st.regs[red.id]; return !!g && g.trust>=red.v;
+}
+function redCost(red){ const x=REDACT.find(y=>y.sec===red.sec); return x?x.c:8; }   // 元のコスト
+function costRed(red){ return TEST_COST_ONE?1:(red.c??redCost(red)); }
+function costMemo(i){ return TEST_COST_ONE?1:(COST_TABLE_ORIGINAL.memo[i]??20); }
+function memoIsRead(i){ return i<MEMO_FREE_PAGES || S.memoRead.includes(i); }
+
+// ---------- PP ----------
+function ppAdd(n,why){
+  if(n<=0) return; S.pp+=n;
+  if(why) log(`${PP_ICON} ${PP_NAME} +${n} (${why})`,"gd");
+}
+// 実時間ベースの加算。閉じている間の分もまとめて加算し、加算量を返す
+function ppAccrue(){
+  const now=Date.now();
+  if(S.pp>=PP_CAP){ S.ppLast=now; return 0; }
+  const n=Math.floor((now-S.ppLast)/PP_MS);
+  if(n<=0) return 0;
+  const add=Math.min(n,PP_CAP-S.pp);
+  S.pp+=add; S.ppLast = (S.pp>=PP_CAP)? now : S.ppLast+n*PP_MS;
+  return add;
+}
+function ppNextText(){
+  if(S.pp>=PP_CAP) return "放置分は上限";
+  const ms=Math.max(0,PP_MS-(Date.now()-S.ppLast)), m=Math.floor(ms/60000), sec=Math.floor(ms%60000/1000);
+  return `次の+1まで ${m}分${String(sec).padStart(2,"0")}秒`;
+}
+function ppBtn(cost,attr){ const ok=S.pp>=cost; return `<button class="ppbtn" ${attr} ${ok?"":"disabled"} title="${ok?"解放する":PP_NAME+"が足りません"}">🔓 ${cost}${PP_NAME}</button>`; }
+function unlockRed(ix){
+  const r=S.reports[ix]; if(!r||!r.red||redOpen(r.red)) return;
+  const c=costRed(r.red); if(S.pp<c) return;
+  S.pp-=c; r.red.open=true; log(`🔓 ${r.date}の日報の伏せ字を解放した (${PP_NAME} -${c})`,"sy"); save(); render(true);
+}
+function unlockMemo(i){
+  if(i>=S.memoMax||memoIsRead(i)) return;
+  const c=costMemo(i); if(S.pp<c) return;
+  S.pp-=c; S.memoRead.push(i); log(`📓 非公開メモ p.${i+1} を読んだ (${PP_NAME} -${c})`,"sy");
+  if(MEMOS.filter((_,k)=>k<S.memoMax&&memoIsRead(k)).length>=4) grant("memo4"); save(); render(true);
+}
+
 function endShift(early){
   const d=S.day; d.early=early;
+  const h=makeHitokoto(d);
   const rep={day:d.n,date:dateStr(d.n),hours:d.start?Math.round((S.t-d.start)/6)/10:0,count:d.count,nom:d.nom,sales:d.sales,
-    rate:d.ratings.length?avg(d.ratings):0,hp:Math.round(S.hp),mp:Math.round(S.mp),weather:S.weather,early,ev:d.ev.slice(0,4),goal:S.goal,goalHit:d.goalHit,rank:RANKS[S.rank].n};
+    rate:d.ratings.length?avg(d.ratings):0,hp:Math.round(S.hp),mp:Math.round(S.mp),weather:S.weather,early,ev:d.ev.slice(0,4),goal:S.goal,goalHit:d.goalHit,rank:RANKS[S.rank].n,
+    tol:r1(S.ch.tol),effMax:r1(d.effMax),bad:d.bad,lines:h.lines,red:h.red};
   S.reports.unshift(rep); if(S.reports.length>30) S.reports.pop();
+  S.repTotal=(S.repTotal||0)+1;
+  if(S.repTotal%PP_REPORT_EVERY===0) ppAdd(PP_REWARD.reports,`日報${S.repTotal}日分`);
   log(`🔴 退勤 本日 ${d.count}件 / ${yen(d.sales)}${early?" (早退)":""}`,"sy");
+  // 境界線のゆるみ: 閾値を超えると「誰にでも許す」状態になり得る(素質型なので起きにくい)
+  const c=S.ch;
+  if(!c.free && c.loose>=75 && R()<(c.loose-75)/60){ c.free=true; log("🌫️ 最近のひよりは、誰に対しても同じ顔をするようになった","ev"); }
+  else if(c.free && c.loose<55){ c.free=false; log("🌱 また少しずつ、相手を選ぶようになった","ev"); }
+  shopCheck();
+  updateMemos();
   setSt("home",30);
 }
+function shopCheck(){
+  const h=S.shop; if(h.heat<35) return;
+  const p=(h.heat-35)/110*(S.t<h.lowKeyUntil?.4:1)*(1+RUMOR_SHOP_P*(S.rumor||0)/100);
+  if(R()<p){
+    const e=pick(SHOP_EVENTS); log(e.tx,"ev"); S.day.ev.push(e.tx);
+    const dm=ri(e.mp[0],e.mp[1]); S.mp=clamp(S.mp+dm,0,100);
+    if(e.rate && S.rating.length) S.rating[S.rating.length-1]=clamp(S.rating[S.rating.length-1]+e.rate*3,1,5);
+    h.heat=clamp(h.heat+e.heat,0,100);
+    if(S.reports[0]) S.reports[0].ev.push(e.tx);
+  }
+}
+function shopLabel(){
+  const v=S.shop.heat;
+  return v<25?"🏪 お店の目: 穏やか":v<50?"🏪 お店の目: ときどき気にかけられている":v<75?"🏪 お店の目: 店長がよく様子を見に来る":"🏪 お店の目: 面談が増えそう";
+}
+function updateMemos(){
+  let n=S.memoMax||1;
+  while(n<MEMOS.length && ratingAvg()>=MEMOS[n][0] && S.total>=MEMOS[n][1]){ n++; log(`📓 非公開メモに新しいページが増えた (${memoIsRead(n-1)?"最初から読めるページ":"読むには"+costMemo(n-1)+PP_NAME})`,"ev"); }
+  S.memoMax=n;
+}
+function checkMoneyMs(){
+  while(S.ppMoneyIdx<PP_MONEY_MS.length && S.money>=PP_MONEY_MS[S.ppMoneyIdx]){ ppAdd(PP_REWARD.money,`貯金${yen(PP_MONEY_MS[S.ppMoneyIdx])}到達`); S.ppMoneyIdx++; }
+}
 function checkBadges(){
+  checkMoneyMs();
   if(S.total>=10) grant("s10"); if(S.total>=100) grant("s100");
   const n=Object.keys(S.regs).length; if(n>=1) grant("reg1"); if(n>=10) grant("reg10");
   if(S.day.sales>=50000) grant("d50k"); if(S.day.sales>=100000) grant("d100k");
@@ -296,25 +1149,27 @@ function checkBadges(){
 }
 function checkRank(){
   const nx=RANKS[S.rank+1]; if(!nx) return;
-  if(S.total>=nx.need && ratingAvg()>=nx.r){ S.rank++; log(`⭐ ランクアップ! 「${nx.n}」になった`,"ev"); S.mp=clamp(S.mp+10,0,100); grant("rank1"); if(S.rank>=3) grant("rank3"); }
+  if(S.total>=nx.need && ratingAvg()>=nx.r){ S.rank++; log(`⭐ ランクアップ! 「${nx.n}」になった`,"ev"); ppAdd(PP_REWARD.rank,"ランクアップ"); S.mp=clamp(S.mp+10,0,100); grant("rank1"); if(S.rank>=3) grant("rank3"); }
 }
 function randomEvent(){
   const working = S.st==="wait";
   const evs = working ? [
     ["☔ 急に雨が降り出した。移動に時間がかかりそう",()=>{S.weather="雨";S.demand*=.85;}],
     ["🔁 常連さんから直接予約!",()=>{ if(Object.keys(S.regs).length) newBooking(true); else S.mp+=3; }],
-    ["🤒 少し体調が悪い…",()=>{S.hp-=15;S.mp-=8;}],
+    ["🤒 少し体調が悪い…",()=>{S.hp-=15;S.mp-=4;}],
     ["📝 サイトに嬉しい口コミが載った",()=>{S.mp+=10;S.demand*=1.1;}],
     ["👔 店長に最近の頑張りを褒められた",()=>{S.mp+=8;}],
-    ["🌀 今日は全体的に暇な日らしい",()=>{S.demand*=.8;S.mp-=4;}],
+    ["🌀 今日は全体的に暇な日らしい",()=>{S.demand*=.8;S.mp-=2;}],
     ["💬 同僚と待機室で雑談して気が晴れた",()=>{S.mp+=6;}],
     ["📢 写メ日記の更新が好評",()=>{S.demand*=1.15;}],
+    ["⚠️ お店でトラブルがあり、しばらく断りにくい空気になった",()=>{S.ch.duty=clamp(S.ch.duty+30,0,100);S.mp-=5;}],
   ] : [
     ["🛍️ 欲しかった物を買えた",()=>{S.mp+=8;S.money-=ri(3,12)*1000;}],
     ["📚 課題がうまく進んだ",()=>{S.mp+=6;}],
     ["🤧 少し風邪気味かも",()=>{S.hp-=10;}],
     ["📱 家族から元気?と連絡がきた",()=>{S.mp+=5;}],
     ["☔ 雨で外出をやめた",()=>{S.weather="雨";}],
+    ["💸 実家から急な出費の相談がきた。しばらく稼がないといけない",()=>{S.money-=ri(5,15)*10000;S.ch.duty=clamp(S.ch.duty+40,0,100);S.mp-=4;}],
   ];
   const e=pick(evs); log(e[0],"ev"); S.day.ev.push(e[0]); e[1]();
   S.hp=clamp(S.hp,0,100); S.mp=clamp(S.mp,0,100);
@@ -323,18 +1178,68 @@ function dateStr(n){const d=new Date(2026,0,4+n);return `${d.getMonth()+1}/${d.g
 
 // ---------- player actions ----------
 const ACTS = [
-  {k:"rest",l:"🍵 休憩を促す",cd:90,can:()=>S.st==="wait",
+  {k:"rest",why:"待機中だけ使える",l:"🍵 休憩を促す",cd:90,can:()=>S.st==="wait",
    go:()=>{setSt("rest",30);S.mp=clamp(S.mp+4,0,100);log("🍵 あなたのすすめで少し休憩することにした","sy");}},
-  {k:"food",l:"🍙 ごはんを差し入れ",cd:240,can:()=>S.st!=="sleep",
+  {k:"food",why:"就寝中は使えない",l:"🍙 ごはんを差し入れ",cd:240,can:()=>S.st!=="sleep",
    go:()=>{const f=pick(FOODS);S.hp=clamp(S.hp+15,0,100);S.mp=clamp(S.mp+6,0,100);S.care++;log(`🎁 ${f}を差し入れた。ひより「ありがと、助かる!」`,"sy");if(S.care>=10)grant("care");}},
-  {k:"msg",l:"💌 応援メッセージ",cd:120,can:()=>S.st!=="sleep",
+  {k:"msg",why:"就寝中は使えない",l:"💌 応援メッセージ",cd:120,can:()=>S.st!=="sleep",
    go:()=>{S.mp=clamp(S.mp+9,0,100);log("💌 応援メッセージを送った。既読がついてスタンプが返ってきた","sy");}},
-  {k:"off",l:"🌿 明日を休日にする",cd:1440,can:()=>!S.offTomorrow,
+  {k:"push",why:"就寝中は使えない",l:"🫸 背中を押す",cd:720,can:()=>S.st!=="sleep",
+   go:()=>{S.ch.push=1;log(pick(["🫸 「やってみたら?」と背中を押した。ひより「…考えとく」","🫸 そっと背中を押した。ひよりは少しだけ笑った","🫸 背中を押した。決めるのは、本人だ"]),"sy");}},
+  {k:"stop",why:"就寝中は使えない",l:"✋ 無理しないでと止める",cd:720,can:()=>S.st!=="sleep",
+   go:()=>{S.ch.push=-1;S.ch.loose=clamp(S.ch.loose-5,0,100);S.mp=clamp(S.mp+3,0,100);log(pick(["✋ 「無理しないで」と伝えた。ひより「うん、ありがと」","✋ ブレーキをかけるように声をかけた。ひよりは素直にうなずいた"]),"sy");}},
+  {k:"check",why:"休みの日か待機中だけ",l:"🩺 定期検診",cd:7*1440,can:()=>["off","dayoff","wait"].includes(S.st),
+   go:()=>{S.ch.risk=clamp(S.ch.risk*.35,0,100);S.pendingCheck=true;log("🩺 定期検診に行ってきた。結果は問題なし","sy");}},
+  {k:"lowkey",why:"就寝中は使えない",l:"🤫 目立たないようにね",cd:3*1440,can:()=>S.st!=="sleep",
+   go:()=>{S.shop.lowKeyUntil=S.t+2*1440;S.shop.heat=clamp(S.shop.heat-8,0,100);log(pick(LOWKEY_LINES),"sy");}},
+  {k:"off",why:"明日はもう休日",l:"🌿 明日を休日にする",cd:1440,can:()=>!S.offTomorrow,
    go:()=>{S.offTomorrow=true;log("🌿 明日はお休みにしよう、と提案した","sy");}},
-  {k:"goal",l:"🏁 今日の目標を設定",cd:0,can:()=>true,go:()=>openGoal()},
-  {k:"stats",l:"📊 常連リスト",cd:0,can:()=>true,go:()=>openRegs()},
+  {k:"goal",menu:true,l:"🏁 今日の目標を設定",cd:0,can:()=>true,go:()=>openGoal()},
+  {k:"stats",menu:true,l:"📊 常連リスト",cd:0,can:()=>true,go:()=>openRegs()},
 ];
-function act(a){ if(!a.can()||S.cd[a.k]>0) return; a.go(); if(a.cd) S.cd[a.k]=a.cd; save(); render(true); }
+const fmtCd = m=>m>=1440?`${Math.floor(m/1440)}日${Math.floor(m%1440/60)}時間`:m>=60?`${Math.floor(m/60)}時間${m%60}分`:`${m}分`;
+let toastTimer=null;
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("on"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove("on"),2200); }
+function flashBtn(btn,cls,fx){
+  if(!btn) return; btn.classList.remove("fired","nope"); void btn.offsetWidth; btn.classList.add(cls);
+  if(fx){ const f=document.createElement("span"); f.className="fx"; f.textContent=fx; btn.appendChild(f); setTimeout(()=>f.remove(),1700); }
+}
+// 押した結果を、見える数値の変化として短く返す
+function actDiff(b,a,k){
+  const out=[]; const d=(n,x,y)=>{const v=Math.round(y-x); if(v) out.push(`${n} ${v>0?"+":""}${v}`);};
+  d("体力",b.hp,S.hp); d("メンタル",b.mp,S.mp); d("安全度",100-b.risk,100-S.ch.risk);
+  if(k==="push") out.push("ひよりの気持ちに少しだけ影響");
+  if(k==="stop") out.push("ブレーキをかけた");
+  if(k==="lowkey") out.push("お店の目が少し和らいだ");
+  if(k==="off") out.push("明日はお休み");
+  if(k==="rest") out.push("休憩に入った");
+  if(!out.length) out.push(b.hp>=99.5&&b.mp>=99.5?"もう元気いっぱい(変化なし)":"変化は小さめ");
+  return out;
+}
+function act(a,btn){
+  const cd=S.cd[a.k]||0;
+  if(cd>0){ toast(`⏳ ${a.l} はまだ使えない(あと${fmtCd(cd)}・ゲーム内)`); flashBtn(btn,"nope"); return; }
+  if(!a.can()){ toast(`🚫 ${a.l}: ${a.why||"今はできない"}`); flashBtn(btn,"nope"); return; }
+  if(a.menu){ a.go(); return; }
+  const b={hp:S.hp,mp:S.mp,risk:S.ch.risk};
+  a.go(); if(a.cd) S.cd[a.k]=a.cd;
+  const df=actDiff(b,a,a.k);
+  toast(`見守った: ${a.l} — ${df.join(" / ")}`);
+  flashBtn(btn,"fired",df.find(x=>/[+-]\d/.test(x))||"✓");
+  save(); render(true);
+}
+// ボタンは一度だけ作り、以後は中身だけ更新(描画ループで作り直してクリックが消えないように)
+function renderActs(){
+  const box=$("acts");
+  if(box.children.length!==ACTS.length || !box.querySelector("[data-a]")){
+    box.innerHTML=ACTS.map((a,i)=>`<button type="button" data-a="${i}"><span class="al">${a.l}</span><span class="cd"></span></button>`).join("");
+  }
+  ACTS.forEach((a,i)=>{ const b=box.children[i], cd=S.cd[a.k]||0, ok=a.can(), dis=cd>0||!ok;
+    const t=cd>0?`⏳ あと${fmtCd(cd)}`:ok?(a.menu?"開く":"実行できます"):`🚫 ${a.why||"今はできない"}`;
+    if(b.classList.contains("dis")!==dis){ b.classList.toggle("dis",dis); b.setAttribute("aria-disabled",dis?"true":"false"); }
+    const sp=b.querySelector(".cd"); if(sp.textContent!==t) sp.textContent=t;
+    const ti=dis?`${a.l}: ${t}`:a.l; if(b.title!==ti) b.title=ti; });
+}
 function openGoal(){
   const opts=[0,30000,50000,80000,120000];
   modal("🏁 今日の売上目標",`<div class="small">達成するとメンタルが回復し、実績が解除されます。</div><div class="goalrow">${opts.map(v=>`<button data-g="${v}" class="${S.goal===v?"on":""}">${v?yen(v):"なし"}</button>`).join("")}</div>`);
@@ -342,16 +1247,55 @@ function openGoal(){
 }
 function openRegs(){
   const r=Object.values(S.regs).sort((a,b)=>b.visits-a.visits);
-  modal("📊 常連リスト",r.length?`<table style="width:100%">${r.slice(0,20).map(x=>`<tr><td>${x.name}</td><td style="text-align:right">${x.visits}回</td></tr>`).join("")}</table>`:"<div class='small'>まだ常連はいません。</div>");
+  const head=`<tr class="small"><td>名前</td><td>タイプ</td><td style="text-align:right">許容度</td><td style="text-align:right">信頼</td><td style="text-align:right">本気度</td><td style="text-align:right">来店</td></tr>`;
+  modal("📊 常連リスト",r.length?`<div style="max-height:60vh;overflow:auto"><table style="width:100%;font-size:12.5px">${head}${r.slice(0,30).map(x=>{const ty=CTYPES[x.type]||CTYPES.kind;return `<tr><td>${esc(shortName(x.name))}</td><td>${ty.i} ${ty.l}</td><td style="text-align:right">${(Math.floor(Math.min(x.tol,Math.min(TR().tolCap,S.ch.tol))*10)/10).toFixed(1)}</td><td style="text-align:right">${Math.round(x.trust)}</td><td style="text-align:right">${Math.round(x.love)}</td><td style="text-align:right">${x.visits}回</td></tr>`;}).join("")}</table></div><div class="small" style="margin-top:6px">許容度はお客さんごとの値(ひより全体の許容度が上限)。${S.ch.free?"<br>🌫️ 最近は、誰に対しても同じ顔をしている。":""}</div>`:"<div class='small'>まだ常連はいません。</div>");
 }
-function modal(t,h){document.getElementById("mTitle").textContent=t;document.getElementById("mBody").innerHTML=h;document.getElementById("modal").style.display="flex";}
-function closeModal(){document.getElementById("modal").style.display="none";}
+function modal(t,h,wide=false){document.getElementById("mTitle").textContent=t;document.getElementById("mBody").innerHTML=h;document.querySelector("#modal .box").classList.toggle("wide",wide);document.getElementById("modal").style.display="flex";custModalId=null;}
+function closeModal(){document.getElementById("modal").style.display="none";custModalId=null;}
+// 客ごとの日記ビュー(プレイ日記のうち、その客と紐づく記録だけを新しい順に)
+let custModalId=null;
+function openCustDiary(id){
+  const x=S.cust[id], g=S.regs[id];
+  const es=S.diary.filter(e=>e.cid===id).slice().reverse();
+  const last=es[0];
+  const name=x?x.n:(last?last.name:"お客さん");
+  const ty=CTYPES[(x&&x.ty)||(g&&g.type)||(last&&last.type)]||CTYPES.kind;
+  const cur=x?custCur(id,x):0;
+  if(x) custPeak(id,x,dayNo(S.t));   // 表示前に到達点を最新化(現在値が到達点を超えて見えないように)
+  const head=`<div class="chead"><span>${ty.i} ${ty.l}${g?" / 常連":""}</span>${x?`<span>許容度 ${cur.toFixed(1)} / 到達 ${x.pk.toFixed(1)} (Lv.${cLv(x.pk)})</span>`:""}<span>信頼 ${Math.round(g?g.trust:(x?x.tr:0))}</span><span>来店 ${g?Math.max(g.visits,x?x.v:0):(x?x.v:0)}回</span><span>日記 ${es.length}件</span></div>`;
+  let body="", shownCh=new Set();
+  for(const e of es){
+    const k=chapOf(e.no);
+    if(chapOpen(k)){ body+=entryHtml(e,false); continue; }
+    // 未解放: 中身は伏せる。同じ章のボタンは1回だけ出す(解放状態は時系列ビューと共有)
+    const btn=!shownCh.has(k)?(chapFull(k)?ppBtn(costDiary(k),`data-ud="${k}"`):'<span class="small">(執筆中)</span>'):"";
+    shownCh.add(k);
+    body+=`<div class="dlock">🔒 ${e.date} の記録 — 第${k+1}章 █████ ${btn}</div>`;
+  }
+  modal(`📖 ${name} との日記`, head+(es.length?body:"<div class='small'>まだ記録がありません。</div>")+`<div class="small" style="margin-top:6px">章を開くと、時系列ビューでも読めるようになります(同じ章にPPを二重に払うことはありません)。</div>`, true);
+  custModalId=id;
+}
+function saveScene(ri_,li){
+  const r=S.reports[ri_]; if(!r||!r.lines||!r.lines[li]) return;
+  const tx=r.lines[li].tx;
+  if(S.scenes.some(s=>s.tx===tx&&s.date===r.date)) return;
+  S.scenes.unshift({date:r.date,tx,tone:r.lines[li].tone}); if(S.scenes.length>100) S.scenes.pop();
+  grant("scene1"); save(); render(true);
+}
 
 // ---------- rendering ----------
 const $=id=>document.getElementById(id);
-let lastLogLen=-1, lastRep=-1;
+let lastLogLen=-1, lastRep="", lastMemo="";
 function bar(lbl,v,max,col,txt){return `<div class="bar"><div class="lbl"><span>${lbl}</span><span>${txt??Math.round(v)+" / "+max}</span></div><div class="tr"><div class="fl" style="width:${clamp(v/max*100,0,100)}%;background:${col}"></div></div></div>`;}
 function stat(k,v){return `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`;}
+function redHtml(red,ix){
+  if(!red) return "";
+  const open=redOpen(red), c=costRed(red);
+  return `<div class="redact">${open?"🔓":"🔒"} ${esc(red.pre)}${open?`<span class="op">${esc(red.sec)}</span>`:`<span class="blk">█████</span>`}${esc(red.post)}${open?"":ppBtn(c,`data-ur="${ix}"`)}</div>`;
+}
+function renderPP(){
+  $("ppchip").textContent=`${PP_ICON} ${PP_NAME} ${S.pp} (放置上限${PP_CAP}) ・ ${ppNextText()}`;
+}
 function render(force){
   const s=ST[S.st]||ST.off, m=mod(S.t);
   $("clock").textContent=`${dateStr(dayNo(S.t))} ${hm(S.t)}`;
@@ -363,57 +1307,164 @@ function render(force){
   if((S.st==="move"||S.st==="work")&&S.cur) sub=` — ${S.cur.name}`;
   if(S.stEnd>S.t) sub+=` (残り${S.stEnd-S.t}分)`;
   $("status").textContent=`${s.i} ${s.l}${sub}`;
-  $("weather").textContent=`天気: ${S.weather==="雨"?"☔ 雨":S.weather==="くもり"?"☁️ くもり":"☀️ 晴れ"} / 客足 ${Math.round(S.demand*100)}%${S.offTomorrow?" / 明日は休日":""}`;
+  $("weather").textContent=`天気: ${S.weather==="雨"?"☔ 雨":S.weather==="くもり"?"☁️ くもり":"☀️ 晴れ"} / 客足 ${Math.round(S.demand*100)}%${S.offTomorrow?" / 明日は休日":""}${holidayNow()?" / 🌙 お休み中":""}`;
   const nx=RANKS[S.rank+1];
   $("rank").textContent=`ランク: ${RANKS[S.rank].n}`+(nx?` (次:${nx.n} 通算${nx.need}件・平均★${nx.r})`:" (最高ランク)");
+  const c=S.ch, T=TR();
   $("bars").innerHTML = bar("体力",S.hp,100,S.hp<30?"var(--bad)":"var(--ok)") + bar("メンタル",S.mp,100,S.mp<30?"var(--bad)":"var(--blue)")
+    + bar("許容度",Math.min(c.tol,T.tolCap),5,"#ff8fb1",(Math.floor(Math.min(c.tol,T.tolCap)*10)/10).toFixed(1)+" / 5")
+    + bar("安全度",100-c.risk,100,(100-c.risk)<40?"var(--bad)":(100-c.risk)<65?"var(--warn)":"#7fd0d0",Math.round(100-c.risk)+" / 100"+(S.sickDays>0?" 🏥休養中":(100-c.risk)<60?" ・ 体調に気をつけたい":""))
+    + (c.duty>0.5?bar("気がかり (義務感)",c.duty,100,"var(--bad)",Math.round(c.duty)+""):"")
     + bar("評価 (直近平均)",ratingAvg(),5,"var(--warn)","★"+ratingAvg().toFixed(2)) + bar("夢の貯金 (留学資金)",S.money,S.dream,"var(--acc)",yen(S.money)+" / "+yen(S.dream));
-  $("dream").textContent="目標: 昼は専門学校生。留学資金を貯めている。";
+  $("dream").innerHTML=`目標: 昼は専門学校生。留学資金を貯めている。<br>素質: <span class="tag">${T.type}</span>${c.push>0?'<span class="tag">背中を押された</span>':c.push<0?'<span class="tag">ブレーキ中</span>':""}${c.free?'<span class="tag">🌫️ 誰にでも同じ顔</span>':""}<span class="small"> (詳しい適性は非公開)</span><br><span class="small">${shopLabel()}${S.t<S.shop.lowKeyUntil?' ・ 🤫 目立たないように中':''}</span>`;
+  $("cycle").textContent=S.cycle>1?`${S.cycle}周目`:"";
   const d=S.day, regN=Object.keys(S.regs).length, uniq=S.nextCust-1;
   $("today").innerHTML = stat("接客数",d.count+"件")+stat("指名数",d.nom+"件")+stat("売上(手取り)",yen(d.sales))
     + stat("本日の評価",d.ratings.length?"★"+avg(d.ratings).toFixed(1):"-")+stat("目標",S.goal?(d.goalHit?"✅ ":"")+yen(S.goal):"なし")
-    + stat("勤務時間", d.start&&["wait","move","work","back","rest"].includes(S.st)?Math.floor((S.t-d.start)/60)+"h"+((S.t-d.start)%60)+"m":"-");
+    + stat("勤務時間", d.start&&["wait","move","work","back","rest"].includes(S.st)?Math.floor((S.t-d.start)/60)+"h"+((S.t-d.start)%60)+"m":"-")
+    + stat("本日の許容度(最大)",d.count?(d.effMax).toFixed(1):"-")+stat("苦手なお客さん",(d.bad||0)+"件")+stat("連続出勤",S.streak+"日");
   $("total").innerHTML = stat("通算接客",S.total+"件")+stat("常連数",regN+"人")+stat("リピーター率",uniq?Math.round(regN/uniq*100)+"%":"-")
     + stat("通算売上",yen(S.totalSales))+stat("貯金",yen(S.money))+stat("記録日数",S.days+"日");
-  $("acts").innerHTML = ACTS.map((a,i)=>{const cd=S.cd[a.k]||0;const dis=!a.can()||cd>0;return `<button data-a="${i}" ${dis?"disabled":""}>${a.l}<span class="cd">${cd>0?"あと"+Math.floor(cd/60)+"h"+cd%60+"m":a.can()?"実行できます":"今はできない"}</span></button>`;}).join("");
-  document.querySelectorAll("[data-a]").forEach(b=>b.onclick=()=>act(ACTS[+b.dataset.a]));
-  $("goalinfo").textContent=S.goal?`本日の目標: ${yen(S.goal)} (${Math.min(100,Math.round(d.sales/S.goal*100))}%)`:"目標は未設定です。";
+  renderActs();
+  $("goalinfo").textContent=(S.goal?`本日の目標: ${yen(S.goal)} (${Math.min(100,Math.round(d.sales/S.goal*100))}%)`:"目標は未設定です。")+" 「背中を押す/止める」は影響だけで、決めるのはひより本人です。"+` ${PP_NAME}は放置(実時間1時間に${PP_PER_HOUR})と節目で貯まり、日報の伏せ字・非公開メモを読むのに使います。`;
   $("speed").innerHTML = SPEEDS.map(v=>`<button data-s="${v}" class="${S.speed===v?"on":""}">${v===0?"⏸":v===1?"▶ 1x":"⏩ "+v+"x"}</button>`).join("");
   document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{S.speed=+b.dataset.s;save();render(true);});
-  // log
   const lk=S.log.length+":"+(S.log.length?S.log[S.log.length-1].t:0);
   if(force||lk!==lastLogLen){
     lastLogLen=lk; const el=$("log");
     el.innerHTML=S.log.slice(-120).reverse().map(x=>`<div class="${x.c}"><span class="t">${dateStr(dayNo(x.t))} ${hm(x.t)}</span>${esc(x.m)}</div>`).join("");
   }
-  if(force||S.reports.length!==lastRep||(S.reports[0]&&S.reports[0].day!==lastRep)){
-    lastRep=S.reports.length;
-    if(S.reports.length) $("reports").innerHTML=S.reports.map(r=>`<div class="rep"><b>📋 ${r.date} の日報</b> ${r.early?"<span class='bd'>(早退)</span>":""}<span class="small"> ${r.weather} / ${r.rank}</span>
+  // 日報(伏せ字は現在の許容度・信頼で解放判定するため、状態キーに含める)
+  const rk=S.reports.length+":"+(S.reports[0]?S.reports[0].day:"")+":"+S.reports.map(r=>redOpen(r.red)?1:0).join("")+":"+S.scenes.length+":"+S.pp;
+  if(force||rk!==lastRep){
+    lastRep=rk;
+    if(S.reports.length) $("reports").innerHTML=S.reports.map((r,ix)=>r.holiday?`<div class="rep"><b>📋 ${r.date} の日報</b> <span class="small">お休み</span></div>`:`<div class="rep"><b>📋 ${r.date} の日報</b> ${r.early?"<span class='bd'>(早退)</span>":""}<span class="small"> ${r.weather} / ${r.rank}</span>
       <table><tr><td>勤務時間</td><td>${r.hours}h</td></tr><tr><td>接客数 / 指名</td><td>${r.count}件 / ${r.nom}件</td></tr>
       <tr><td>売上(手取り)</td><td>${yen(r.sales)}</td></tr><tr><td>平均評価</td><td>${r.rate?"★"+r.rate.toFixed(2):"-"}</td></tr>
-      <tr><td>退勤時 体力 / メンタル</td><td>${r.hp} / ${r.mp}</td></tr>${r.goal?`<tr><td>目標 ${yen(r.goal)}</td><td>${r.goalHit?"✅ 達成":"未達"}</td></tr>`:""}</table>
+      <tr><td>退勤時 体力 / メンタル</td><td>${r.hp} / ${r.mp}</td></tr>${r.tol!=null?`<tr><td>許容度 (本日最大 / 全体)</td><td>${r.effMax.toFixed(1)} / ${r.tol.toFixed(1)}</td></tr>`:""}${r.bad?`<tr><td>苦手なお客さん</td><td>${r.bad}件</td></tr>`:""}${r.goal?`<tr><td>目標 ${yen(r.goal)}</td><td>${r.goalHit?"✅ 達成":"未達"}</td></tr>`:""}</table>
+      ${(r.lines||[]).map((l,li)=>{const saved=S.scenes.some(s=>s.tx===l.tx&&s.date===r.date);return `<div class="hito t-${l.tone}"><span class="tx">「${esc(l.tx)}」 <span class="tag">${TONE_L[l.tone]||""}</span></span><button data-sc="${ix}:${li}" title="名場面に保存" ${saved?"disabled":""}>${saved?"★":"☆"}</button></div>`;}).join("")}
+      ${redHtml(r.red,ix)}
       ${r.ev.length?`<div class="small" style="margin-top:3px">出来事: ${r.ev.map(esc).join(" / ")}</div>`:""}</div>`).join("");
+    document.querySelectorAll("[data-sc]").forEach(b=>b.onclick=()=>{const [a,l]=b.dataset.sc.split(":").map(Number);saveScene(a,l);});
+    // 名場面
+    $("scenes").innerHTML=S.scenes.length?S.scenes.map((x,i)=>`<div class="scene"><span class="tx"><span class="small">${x.date}</span> 「${esc(x.tx)}」 <span class="tag">${TONE_L[x.tone]||""}</span></span><button data-dsc="${i}" title="削除">✕</button></div>`).join(""):"<div class='small'>まだ保存された名場面はありません。</div>";
+    document.querySelectorAll("[data-dsc]").forEach(b=>b.onclick=()=>{S.scenes.splice(+b.dataset.dsc,1);save();render(true);});
   }
+  // 非公開メモ(メンタルが低いと暗い内容になる)
+  const dark=S.mp<35;
+  const mk=S.memoMax+":"+S.memoRead.join(",")+":"+TEST_COST_ONE+":"+dark+":"+S.pp;
+  if(force||mk!==lastMemo){
+    lastMemo=mk;
+    // 新しく出現したページが上。未出現のページは存在だけ見せる
+    const future=MEMOS.length-S.memoMax;
+    const shown=[];
+    for(let i=S.memoMax-1;i>=0;i--){
+      const x=MEMOS[i];
+      if(!memoIsRead(i)) shown.push(`<div class="memo">🔒 p.${i+1} <span style="background:#3a3550;color:#3a3550;border-radius:3px">█████████</span>${ppBtn(costMemo(i),`data-um="${i}"`)}</div>`);
+      else shown.push(`<div class="memo ${dark?"dark":""}">📓 p.${i+1}${i<MEMO_FREE_PAGES?' <span class="tag">公開</span>':""} ${esc(dark?x[3]:x[2])}</div>`);
+    }
+    $("memos").innerHTML=(future>0?`<div class="memo lock">🔒 p.${S.memoMax+1}〜p.${MEMOS.length} █████ <span class="small">?? ${PP_NAME} / 次のページは 平均★${MEMOS[S.memoMax][0]}・通算${MEMOS[S.memoMax][1]}件 で現れる</span></div>`:"")+shown.join("");
+  }
+  renderDiary(force);
+  renderCust(force);
+  renderPP();
   $("badges").innerHTML=BADGES.map(b=>`<span class="bdg ${S.badges[b[0]]?"got":""}" title="${b[2]}">${b[1]} ${b[2]}</span>`).join("");
+}
+let lastDiary="";
+function entryHtml(e,showName=true){
+  const ty=CTYPES[e.type]||CTYPES.kind;
+  return `<div class="dent"><div class="hd"><span>${e.date} ${e.time}頃</span>${showName?`<span>${ty.i} ${esc(e.name)}(${ty.l})</span>`:""}<span>お客さんの満足度 ${e.cs}</span><span>ひよりの満足度 ${e.hs}</span><span>許容度 ${e.tol.toFixed(1)}</span>${e.rel&&REL_L[e.rel]?`<span class="tag">${REL_L[e.rel]}</span>`:""}</div>
+    ${(e.flags||[]).map(f=>`<span class="flag">✦ ${DIARY_FLAG[f]?DIARY_FLAG[f].l:f}</span>`).join("")}
+    ${e.lines.map((l,i)=>`<div class="ln">${i===0&&e.mk?`<span class="pmk">${esc(e.mk)}</span> `:""}「${esc(l)}」</div>`).join("")}</div>`;
+}
+function lockedChapHtml(k,n){
+  const full=chapFull(k);
+  return `<div class="chap lock"><h4>🔒 第${k+1}章 (${n}件${full?`、必要${costDiary(k)}${PP_NAME}`:`/${DIARY_CHAPTER}件・執筆中`})${chapHasFlag(k)?' <span class="flag">✦ 節目を含む</span>':""}</h4>${full?ppBtn(costDiary(k),`data-ud="${k}"`):'<span class="small">3件たまると開けられるようになる</span>'}</div>`;
+}
+let lastCust="", custLimit=CUST_PAGE;
+const LV_COL=["#f6c6d6","#f6c6d6","#ffaac4","#ff7aa5","#e8467c","#b8185a"];   // Lv3以降を段階的に濃く
+function custMarks(id,x,cur,d){
+  let m="";
+  if(x.up!=null && d-x.up<=30) m+='<span class="mk" title="今月、許容が進んだ">🆙</span>';
+  const tr=S.regs[id]?S.regs[id].trust:x.tr;
+  if(cLv(x.pk)>=3 && tr<30) m+='<span class="mk" title="許容度は高いが信頼は低い">💰</span>';
+  if(x.irr!=null) m+='<span class="mk" title="イレギュラーな夜があった">⚡</span>';
+  if(cur<(x.pn??x.pk)-.3) m+='<span class="mk" title="許容度が下がった(離れかけ)">🍂</span>';
+  return m;
+}
+function renderCust(force){
+  const d=dayNo(S.t);
+  const key=S.total+":"+d+":"+S.custSort+":"+S.custLv+":"+custLimit+":"+Object.keys(S.cust).length+":"+Math.floor(S.ch.tol*10);
+  if(!force && key===lastCust) return; lastCust=key;
+  const cum=custCum(), tot=cum[0], prev=S.custPrev;
+  const ids=Object.keys(S.cust);
+  const avgPk=ids.length?ids.reduce((a,i)=>a+S.cust[i].pk,0)/ids.length:0;
+  const df=v=>v>0?`<span class="gd">+${v}</span>`:v<0?`<span class="bd">${v}</span>`:"±0";
+  $("custSum").innerHTML=[5,4,3,2,1].map(l=>`<div class="lvrow ${S.custLv===l?"sel":""}" data-lv="${l}"><span>Lv.${l}以上</span><div class="tr"><div class="fl" style="width:${tot?cum[l]/tot*100:0}%;background:${LV_COL[l]}"></div></div><span class="n">${cum[l]}人 <span class="small">${prev?df(cum[l]-prev[l]):""}</span></span></div>`).join("")
+    +`<div class="csum"><span>合計(Lv.0以上=全員) ${tot}人${prev?` (前日比 ${df(tot-prev[0])})`:""}</span><span>Lv.4以上 ${tot?Math.round(cum[4]/tot*100):0}%</span><span>平均の到達点 ${avgPk.toFixed(2)}</span><span>常連 ${Object.keys(S.regs).length}人</span></div>`;
+  $("custSort").value=S.custSort;
+  let list=ids.map(id=>{const x=S.cust[id], g=S.regs[id];return {id,x,g,cur:custCur(id,x),tr:g?g.trust:x.tr,lv:g?g.love:x.lv,v:g?Math.max(g.visits,x.v):x.v};});
+  if(S.custLv!=null) list=list.filter(o=>cLv(o.x.pk)>=S.custLv);
+  const sorts={tol:(a,b)=>b.x.pk-a.x.pk||b.cur-a.cur, trust:(a,b)=>b.tr-a.tr, visits:(a,b)=>b.v-a.v, recent:(a,b)=>(b.x.last??-1)-(a.x.last??-1)};
+  list.sort(sorts[S.custSort]||sorts.tol);
+  $("custFilterInfo").innerHTML=S.custLv!=null?`Lv.${S.custLv}以上で絞り込み中 (${list.length}人) <button data-lvclr="1" class="ppbtn">解除</button>`:`${list.length}人`;
+  const shown=list.slice(0,custLimit);
+  $("custList").innerHTML=shown.length?`<div class="clist">${shown.map(o=>{const ty=CTYPES[o.x.ty]||CTYPES.kind;return `<div class="crow" data-cust="${esc(o.id)}" title="この人との日記を見る"><div><span class="nm">${esc(o.x.n)}</span> <span class="small">${ty.i} ${ty.l}${o.g?" / 常連":""}</span>${custMarks(o.id,o.x,o.cur,d)}</div>
+      <div class="kv"><span>到達 Lv.${cLv(o.x.pk)}</span><span>許容度 ${o.cur.toFixed(1)} / ${o.x.pk.toFixed(1)}</span><span>信頼 ${Math.round(o.tr)}</span><span>本気度 ${Math.round(o.lv)}</span><span>来店 ${o.v}回</span><span>最後 ${o.x.last!=null?dateStr(o.x.last):"-"}</span></div></div>`;}).join("")}</div>`
+      +(list.length>shown.length?`<div style="margin-top:6px"><button data-cmore="1">さらに表示 (残り${list.length-shown.length}人)</button></div>`:"")
+    :"<div class='small'>該当するお客さんはいません。</div>";
+}
+function renderDiary(force){
+  const key=S.diaryNo+":"+S.diaryOpen.join(",")+":"+S.diaryView+":"+S.pp+":"+TEST_COST_ONE+":"+S.diary.length;
+  if(!force && key===lastDiary) return; lastDiary=key;
+  document.querySelectorAll("[data-dv]").forEach(b=>b.classList.toggle("on",b.dataset.dv===S.diaryView));
+  if(!S.diary.length){ $("diary").innerHTML="<div class='small'>まだ記録はありません。次の来店から書かれます。</div>"; return; }
+  const minCh=chapOf(S.diary[0].no), maxCh=chapOf(S.diaryNo-1);
+  let h="";
+  if(S.diaryView==="time"){
+    for(let k=maxCh;k>=minCh;k--){
+      const es=chapEntries(k); if(!es.length) continue;
+      if(!chapOpen(k)){ h+=lockedChapHtml(k,es.length); continue; }
+      h+=`<div class="chap"><h4>📖 第${k+1}章 ${es[0].date}〜${es[es.length-1].date}${k<DIARY_FREE_CHAPTERS?' <span class="tag">無料</span>':""}</h4>${es.slice().reverse().map(e=>entryHtml(e)).join("")}</div>`;
+    }
+  } else {
+    const groups={};
+    for(const e of S.diary){ (groups[e.cid]=groups[e.cid]||[]).push(e); }
+    const ids=Object.keys(groups).sort((a,b)=>groups[b][groups[b].length-1].no-groups[a][groups[a].length-1].no);
+    for(const id of ids){
+      const es=groups[id], last=es[es.length-1], ty=CTYPES[last.type]||CTYPES.kind, g=S.regs[id];
+      const open=es.filter(e=>chapOpen(chapOf(e.no))).reverse(), locked=es.filter(e=>!chapOpen(chapOf(e.no)));
+      const lockCh=[...new Set(locked.map(e=>chapOf(e.no)))].sort((a,b)=>b-a);
+      h+=`<div class="chap"><h4>${ty.i} ${esc(last.name)} <span class="small">${ty.l} / 記録${es.length}件${g?` / 信頼${Math.round(g.trust)}・本気度${Math.round(g.love)}`:""}</span></h4>
+        ${open.map(e=>entryHtml(e,false)).join("")}
+        ${locked.length?`<div class="small">🔒 未解放 ${locked.length}件 ${lockCh.map(k=>chapFull(k)?`第${k+1}章${ppBtn(costDiary(k),`data-ud="${k}"`)}`:`第${k+1}章(執筆中)`).join(" ")}</div>`:""}</div>`;
+    }
+  }
+  $("diary").innerHTML=h;
 }
 function esc(s){return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
 
 // ---------- offline progress ----------
+let ppAway=0;
 function offline(){
+  ppAway=ppAccrue();
   const sec=(Date.now()-(S.last||Date.now()))/1000;
   const sp=S.speed||1;
   const mins=Math.min(OFFLINE_CAP,Math.floor(sec*sp));
-  if(mins<5) return;
-  const before={money:S.money,total:S.total,days:S.days,rank:S.rank,reg:Object.keys(S.regs).length};
+  if(mins<5){ if(ppAway>0){ log(`${PP_ICON} 留守中に ${PP_NAME} +${ppAway}`,"gd"); modal("🕰️ おかえりなさい",`<div>留守中に ${PP_ICON} <b>${PP_NAME} +${ppAway}</b> (現在 ${S.pp})</div>`);} return; }
+  const before={pp:S.pp-ppAway,money:S.money,total:S.total,days:S.days,rank:S.rank,reg:Object.keys(S.regs).length,tol:S.ch.tol};
   offSum={ev:0};
   for(let i=0;i<mins;i++) step();
-  const ev=offSum.ev; offSum=null;
+  offSum=null;
   log(`🕰️ 留守中に ${Math.floor(mins/60)}時間${mins%60}分 経過しました`,"sy");
   modal("🕰️ おかえりなさい",`<div>留守中にゲーム内で <b>${Math.floor(mins/60)}時間${mins%60}分</b> が経過しました${mins>=OFFLINE_CAP?"(上限7日)":""}。</div>
    <table style="width:100%;margin-top:8px">
    <tr><td>接客数</td><td style="text-align:right">+${S.total-before.total}件</td></tr>
    <tr><td>貯金</td><td style="text-align:right">${S.money-before.money>=0?"+":""}${yen(S.money-before.money)}</td></tr>
    <tr><td>新しい常連</td><td style="text-align:right">+${Object.keys(S.regs).length-before.reg}人</td></tr>
+   <tr><td>${PP_ICON} ${PP_NAME} (放置ぶん)</td><td style="text-align:right">+${ppAway}${S.pp>=PP_CAP?" (上限)":""}</td></tr>
+   <tr><td>${PP_ICON} ${PP_NAME} (節目の報酬)</td><td style="text-align:right">+${Math.max(0,S.pp-before.pp-ppAway)} → 現在 ${S.pp}</td></tr>
+   <tr><td>許容度</td><td style="text-align:right">${before.tol.toFixed(1)} → ${S.ch.tol.toFixed(1)}</td></tr>
    <tr><td>経過日数</td><td style="text-align:right">+${S.days-before.days}日</td></tr>
    ${S.rank>before.rank?`<tr><td>ランク</td><td style="text-align:right">⭐ ${RANKS[S.rank].n}</td></tr>`:""}
    </table><div class="small" style="margin-top:6px">詳しくはイベントログと日報をどうぞ。</div>`);
@@ -428,9 +1479,33 @@ function loop(now){
   if(n) render(false);
   requestAnimationFrame(loop);
 }
+document.addEventListener("click",e=>{
+  const ab=e.target.closest("[data-a]"); if(ab){ act(ACTS[+ab.dataset.a],ab); return; }
+  const u=e.target.closest("[data-ur]"); if(u&&!u.disabled){unlockRed(+u.dataset.ur);return;}
+  const m=e.target.closest("[data-um]"); if(m&&!m.disabled){unlockMemo(+m.dataset.um);return;}
+  const dd=e.target.closest("[data-ud]"); if(dd&&!dd.disabled){const keep=custModalId; unlockDiary(+dd.dataset.ud); if(keep!=null) openCustDiary(keep); return;}
+  const cr=e.target.closest("[data-cust]"); if(cr){openCustDiary(cr.dataset.cust);return;}
+  const lv=e.target.closest("[data-lv]"); if(lv){const l=+lv.dataset.lv; S.custLv=S.custLv===l?null:l; custLimit=CUST_PAGE; save(); renderCust(true); return;}
+  if(e.target.closest("[data-lvclr]")){S.custLv=null; custLimit=CUST_PAGE; save(); renderCust(true); return;}
+  if(e.target.closest("[data-cmore]")){custLimit+=CUST_PAGE; renderCust(true); return;}
+  const dv=e.target.closest("[data-dv]"); if(dv){S.diaryView=dv.dataset.dv;save();render(true);return;}
+});
+setInterval(()=>{ if(ppAccrue()>0){ lastMemo=""; render(true);} else renderPP(); },1000);
+$("custSort").onchange=e=>{S.custSort=e.target.value; custLimit=CUST_PAGE; save(); renderCust(true);};
 $("mClose").onclick=closeModal;
 $("modal").onclick=e=>{if(e.target.id==="modal")closeModal();};
-$("resetBtn").onclick=()=>{ if(confirm("すべての記録をリセットしますか?")){localStorage.removeItem(SAVE_KEY);S=defState();lastLogLen=-1;lastRep=-1;$("reports").innerHTML='<div class="small">まだ日報はありません。</div>';intro();render(true);} };
+function newGamePlus(){
+  const keepRed=new Set(S.carryRed);
+  for(const r of S.reports) if(r.red && r.red.open && r.red.tid!=null) keepRed.add(r.red.tid);
+  const keep={pp:S.pp,ppLast:S.ppLast,memoRead:S.memoRead.slice(),diaryOpen:S.diaryOpen.slice(),carryRed:[...keepRed],scenes:S.scenes.slice(),cycle:(S.cycle||1)+1,speed:S.speed,diaryView:S.diaryView,custSort:S.custSort};
+  S=Object.assign(defState(),keep);
+  lastLogLen=-1;lastRep="";lastMemo="";lastDiary="";lastCust="";
+  $("reports").innerHTML='<div class="small">まだ日報はありません。</div>';
+  intro(); log(`🔁 ${S.cycle}周目を始めます。${PP_NAME}と解放済みの記録は引き継がれました`,"sy");
+  save(); render(true);
+}
+$("ngBtn").onclick=()=>{ if(confirm("最初からプレイしますか?\nひよりの進行(時間・ステータス・貯金・ランク・常連・日報・日記の記録・実績など)は初期化されます。\nPPと、解放済みの伏せ字・メモ・日記の章、名場面は引き継がれます。")) newGamePlus(); };
+$("resetBtn").onclick=()=>{ if(confirm("全データを削除しますか?\nPP・解放状態・名場面も含めて、すべて消えます。元に戻せません。")){localStorage.removeItem(SAVE_KEY);S=defState();lastLogLen=-1;lastRep="";lastMemo="";lastDiary="";$("reports").innerHTML='<div class="small">まだ日報はありません。</div>';intro();render(true);} };
 function intro(){ if(!S.log.length){ log("🌙 観察を始めます。ひより(22)は昼は専門学校生、夜はお店に在籍して留学資金を貯めている。","sy"); log("💡 右上で時間の速さを変えられます。基本は眺めるだけでOK。","sy"); } }
 document.addEventListener("visibilitychange",()=>{ if(document.hidden) save(); else { offline(); render(true);} });
 window.addEventListener("beforeunload",save);
@@ -438,7 +1513,7 @@ setInterval(save,10000);
 intro(); offline(); render(true); save();
 requestAnimationFrame(loop);
 // テスト用フック
-window.__game={get S(){return S},step,render};
+window.__game={get S(){return S},openCustDiary,custCum,custCounts,renderCust,DIARY_REL,relOf,newGamePlus,shopCheck,unlockDiary,costDiary,ppAccrue,offline,unlockRed,unlockMemo,step,render,endShift,makeHitokoto,LINES};
 </script>
 </body>
 </html>
