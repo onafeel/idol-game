@@ -52,11 +52,11 @@ main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1.2fr);ga
 .pms{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 10px}
 .pms div{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px}
 .pms b{display:block;font-size:14px;margin-top:2px}
-.ptab{width:100%;border-collapse:collapse;font-size:12px}
-.ptab th,.ptab td{padding:4px 3px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.ptab{width:100%;border-collapse:collapse;font-size:11.5px}
+.ptab th,.ptab td{padding:4px 2px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 .ptab th:first-child,.ptab td:first-child{text-align:left}
-.ptab th{color:var(--sub);font-weight:600;font-size:11px}
-.pbar{display:inline-block;vertical-align:middle;width:46px;height:7px;background:var(--line);border-radius:4px;overflow:hidden;margin-right:4px}
+.ptab th{color:var(--sub);font-weight:600;font-size:10px;line-height:1.25;white-space:nowrap;vertical-align:bottom}
+.pbar{display:inline-block;vertical-align:middle;width:30px;height:7px;background:var(--line);border-radius:4px;overflow:hidden;margin-right:4px}
 .pbar i{display:block;height:100%;background:#e8467c}
 .pwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .pspark{width:100%;height:auto;display:block;margin-top:4px}
@@ -742,7 +742,7 @@ function step(){
 
 function newDay(wd){
   S.days++;
-  if(!S.mstat) progressRebuild(); progressDaily();
+  if(!S.mstat) progressRebuild(); else if(S.progV!==2) progressUpgrade(); progressDaily();
   dailyHealth();
   custDaily();
   S.shop.heat=clamp(S.shop.heat-(S.isOff?4:2.5)+RUMOR_HEAT*(S.rumor||0)/100,0,100);
@@ -1001,8 +1001,8 @@ function finishWork(){
       if(!g){ const a=base*room; S.rumor=clamp((S.rumor||0)+a,0,100); S.rumorN.fromNew+=a; }
       else if(R()<RUMOR_REG_P){ const a=base*RUMOR_REG_K*room; S.rumor=clamp((S.rumor||0)+a,0,100); S.rumorN.fromReg+=a; } } }
   addDiary(c,type,g,eff,r,rsn,pre,rel,vibe,lv4rep);
-  { const pk0=S.cust[c.id]?S.cust[c.id].pk:0; progressRecord(c.id,eff,pk0); }
   updateCust(c,type,eff,vibe);
+  progressRecord(c.id,eff);
   if(!g){ S.bkN=S.bkN||{nw:0,ret:0}; S.bkN.nw++; if(S.regs[c.id]) S.bkN.ret++; else if(S.cust[c.id]) S.cust[c.id].once=true; }
   S.cur=null; setSt("back",ri(15,25));
   checkBadges(); checkRank();
@@ -1517,14 +1517,29 @@ const PROGRESS_SHOW_NUMBERS = true;   // false にすると数値を伏せてバ
 const MSTAT_MAX = 36;                 // 保存する月数の上限
 function monthKey(n){ const d=new Date(2026,0,4+n); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
 function monthLabel(k){ const [y,m]=k.split("-"); return `${+y===2026?"":y+"/"}${+m}月`; }
-function mstatNew(){ return {v:0,n4:0,n5:0,new4:0,u4:[],u5:[],tolEnd:null}; }
+function mstatNew(){ return {v:0,n4:0,n5:0,new4:0,new5:0,u4:[],u5:[],tolEnd:null}; }
 function mstatCur(n){ if(!S.mstat) S.mstat={}; const k=monthKey(n); return S.mstat[k]||(S.mstat[k]=mstatNew()); }
 function mstatClose(m){ if(m.u4){ m.u4n=m.u4.length; delete m.u4; } if(m.u5){ m.u5n=m.u5.length; delete m.u5; } }
 const mU4 = m=>m.u4?m.u4.length:(m.u4n||0), mU5 = m=>m.u5?m.u5.length:(m.u5n||0);
-function progressRecord(id,eff,prevPk){
-  const n=dayNo(S.t), L=cLv(r1(eff)), m=mstatCur(n); m.v++;
-  if(L>=4){ m.n4++; if(!m.u4.includes(id)) m.u4.push(id); if(prevPk<4) m.new4++; if(!S.firstLv4) S.firstLv4={day:n}; }
-  if(L>=5){ m.n5++; if(!m.u5.includes(id)) m.u5.push(id); if(!S.firstLv5) S.firstLv5={day:n}; }
+// 初到達は客ごとに1回だけ: 客データに x.r4 / x.r5(初めてLv4/Lv5以上の夜を記録した日)を持たせて判定
+function progressRecord(id,eff){
+  const n=dayNo(S.t), L=cLv(r1(eff)), m=mstatCur(n), x=S.cust[id]; m.v++;
+  if(L>=4){ m.n4++; if(!m.u4.includes(id)) m.u4.push(id); if(x && x.r4==null){ x.r4=n; if(m.new4!=null) m.new4++; } if(!S.firstLv4) S.firstLv4={day:n}; }
+  if(L>=5){ m.n5++; if(!m.u5.includes(id)) m.u5.push(id); if(x && x.r5==null){ x.r5=n; if(m.new5!=null) m.new5++; } if(!S.firstLv5) S.firstLv5={day:n}; }
+}
+// 初到達の目印(r4/r5)が無いセーブ向け: 日記と到達点から付け、初Lv5の月次値を再構築(できない月は「記録前」)
+function progressUpgradeFlags(){
+  for(const e of S.diary){ const x=S.cust[e.cid]; if(!x) continue; const L=cLv(e.tol||0); if(L>=4&&(x.r4==null||x.r4>e.day)) x.r4=e.day; if(L>=5&&(x.r5==null||x.r5>e.day)) x.r5=e.day; }
+  for(const id in S.cust){ const x=S.cust[id]; if(x.r4==null && cLv(x.pk)>=4) x.r4=-1; if(x.r5==null && cLv(x.pk)>=5) x.r5=-1; }   // 日付不明の到達は -1
+  S.progV=2;
+}
+function progressUpgrade(){
+  const D=[...S.diary].sort((a,b)=>a.no-b.no), complete=(S.diaryNo||0)===D.length && (S.total||0)<=D.length;
+  progressUpgradeFlags();
+  const redo=new Set(); for(const k in S.mstat||{}){ const m=S.mstat[k]; if(m.new5===undefined){ m.new5=null; redo.add(k); } }
+  if(complete && redo.size){ const seen=new Set(); for(const k of redo) S.mstat[k].new5=0;
+    for(const e of D){ if(cLv(e.tol||0)>=5 && e.cid && !seen.has(e.cid)){ seen.add(e.cid); const k=monthKey(e.day); if(redo.has(k)) S.mstat[k].new5++; } } }
+  S.progV=2;
 }
 // 日次: 月が変わったら前の月を閉じる(月末の素の許容度を記録し、客IDを人数に圧縮)
 function progressDaily(){
@@ -1540,15 +1555,15 @@ function progressRebuild(){
   const seen4=new Set(), seen5=new Set(); let f4=null,f5=null;
   for(const e of D){ const k=monthKey(e.day), m=S.mstat[k]||(S.mstat[k]=mstatNew()); m.v++; m.rec=true; const L=cLv(e.tol||0);
     if(L>=4){ m.n4++; if(e.cid&&!m.u4.includes(e.cid)) m.u4.push(e.cid); if(e.cid&&!seen4.has(e.cid)){ seen4.add(e.cid); if(complete) m.new4++; } if(f4==null) f4=e.day; }
-    if(L>=5){ m.n5++; if(e.cid&&!m.u5.includes(e.cid)) m.u5.push(e.cid); if(f5==null) f5=e.day; } }
-  if(!complete) for(const k in S.mstat) S.mstat[k].new4=null;   // 以前の到達点が分からないので出さない
+    if(L>=5){ m.n5++; if(e.cid&&!m.u5.includes(e.cid)) m.u5.push(e.cid); if(e.cid&&!seen5.has(e.cid)){ seen5.add(e.cid); if(complete) m.new5++; } if(f5==null) f5=e.day; } }
+  if(!complete) for(const k in S.mstat){ S.mstat[k].new4=null; S.mstat[k].new5=null; }   // 以前の到達点が分からないので出さない
   const reps=[...S.reports].filter(r=>!r.holiday&&r.tol!=null).sort((a,b)=>a.day-b.day);
   for(const r of reps){ const k=monthKey(r.day); if(S.mstat[k]) S.mstat[k].tolEnd=r.tol; }
   const kNow=monthKey(dayNo(S.t)); for(const k in S.mstat) if(k!==kNow) mstatClose(S.mstat[k]);
   S.firstLv4 = f4!=null?{day:f4,approx:!complete}:null; S.firstLv5 = f5!=null?{day:f5,approx:!complete}:null;
   if(!complete && !S.firstLv4 && Object.values(S.cust).some(x=>x.pk>=4)) S.firstLv4={unknown:true};
   if(!complete && !S.firstLv5 && Object.values(S.cust).some(x=>x.pk>=5)) S.firstLv5={unknown:true};
-  mstatCur(dayNo(S.t)); S.mstatRebuilt=true;
+  mstatCur(dayNo(S.t)); S.mstatRebuilt=true; S.progV=0; progressUpgradeFlags();
 }
 function openProgress(){
   if(!S.mstat) progressRebuild();
@@ -1557,9 +1572,10 @@ function openProgress(){
     :`<div>${lv} が初めて出た日<b>${dateStr(f.day)}${N?`(${f.day-start+1}日目)`:""}${f.approx?' <span class="small">記録上</span>':""}</b></div>`;
   const kNow=monthKey(dayNo(S.t)), ks=Object.keys(S.mstat).sort();
   let rows="";
-  if(S.mstatFrom) rows+=`<tr><td>${monthLabel(S.mstatFrom)}より前</td><td colspan="5" style="text-align:left" class="small">記録前</td></tr>`;
+  if(S.mstatFrom) rows+=`<tr><td>${monthLabel(S.mstatFrom)}より前</td><td colspan="6" style="text-align:left" class="small">記録前</td></tr>`;
   for(const k of ks){ const m=S.mstat[k], rate=m.v?Math.round(m.n4/m.v*100):0, now=k===kNow;
-    rows+=`<tr><td>${monthLabel(k)}${now?' <span class="small">途中</span>':""}</td><td>${num(mU4(m),"人")}</td><td>${m.new4==null?'<span class="small">記録前</span>':num(m.new4,"人")}</td><td>${num(mU5(m),"人")}</td>
+    const pre='<span class="small">記録前</span>';
+    rows+=`<tr><td>${monthLabel(k)}${now?' <span class="small">途中</span>':""}</td><td>${num(mU4(m),"人")}</td><td>${m.new4==null?pre:num(m.new4,"人")}</td><td>${num(mU5(m),"人")}</td><td>${m.new5==null?pre:num(m.new5,"人")}</td>
       <td><span class="pbar"><i style="width:${rate}%"></i></span>${num(rate,"%")}</td><td>${now?num(r1(S.ch.tol).toFixed(1)):m.tolEnd==null?'<span class="small">記録前</span>':num(m.tolEnd.toFixed(1))}</td></tr>`; }
   // 素の許容度の折れ線(月末値。今月は現在値)
   const pts=ks.map((k,i)=>({i,v:k===kNow?S.ch.tol:S.mstat[k].tolEnd})).filter(p=>p.v!=null);
@@ -1571,8 +1587,8 @@ function openProgress(){
       <div class="small">点線 = Lv.4 の目安 / 月末の値(今月は現在)</div>`; }
   modal("📈 許容の歩み",`<div class="small">ゲーム内の月ごとの集計です(数値はメタ情報のみ)。</div>
     <div class="pms">${ms(S.firstLv4,"Lv.4")}${ms(S.firstLv5,"Lv.5以上")}</div>
-    <div class="pwrap"><table class="ptab"><tr><th>月</th><th>Lv4以上</th><th>初Lv4</th><th>Lv5以上</th><th>Lv4以上の夜</th><th>素の許容度</th></tr>${rows}</table></div>
-    <div class="small" style="margin-top:4px">Lv4以上・Lv5以上 = その月に許した客の人数(同じ客は1人) / 初Lv4 = その月に初めてLv4に届いた客 / 割合 = その月の来店のうちLv4以上の夜</div>
+    <div class="pwrap"><table class="ptab"><tr><th>月</th><th>Lv4以上<br>を許した</th><th>🆕初<br>Lv4</th><th>Lv5以上<br>を許した</th><th>🆕初<br>Lv5</th><th>Lv4以上<br>の夜</th><th>素の<br>許容度</th></tr>${rows}</table></div>
+    <div class="small" style="margin-top:4px">「〜を許した」= その月に許した客の人数(同じ客は1人) / 🆕初Lv4・🆕初Lv5 = その月に初めてそのレベルに届いた客(客ごとに1回だけ) / 夜の割合 = その月の来店のうちLv4以上の夜</div>
     <h4 style="margin:12px 0 2px;font-size:13px">素の許容度の成長</h4>${spark}`,true);
 }
 const LV_COL=["#f6c6d6","#f6c6d6","#ffaac4","#ff7aa5","#e8467c","#b8185a"];   // Lv3以降を段階的に濃く
@@ -1726,7 +1742,7 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden){ S.last=D
 window.addEventListener("beforeunload",save);
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && document.getElementById("modal").style.display==="flex") closeModal(); });
 setInterval(save,10000);
-if(!S.mstat) progressRebuild();
+if(!S.mstat) progressRebuild(); else if(S.progV!==2) progressUpgrade();
 $("progBtn").onclick=openProgress;
 intro(); offline(); render(true); save();
 requestAnimationFrame(loop);
