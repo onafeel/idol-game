@@ -40,7 +40,7 @@ main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1.2fr);ga
 .acts button:active{transform:scale(.96)}
 .acts button:focus-visible{outline:2px solid #ff8fb1;outline-offset:1px}
 .acts button.dis{opacity:.45;cursor:not-allowed}
-.acts button.fired{animation:actfire .7s ease-out}
+.acts button.fired,#speed button.fired{animation:actfire .7s ease-out}
 .acts button.nope{animation:actnope .35s}
 @keyframes actfire{0%{background:#ff8fb1;color:#111}100%{}}
 @keyframes actnope{0%,100%{transform:translateX(0)}25%{transform:translateX(-3px)}75%{transform:translateX(3px)}}
@@ -48,6 +48,18 @@ main{display:grid;grid-template-columns:minmax(280px,1fr) minmax(280px,1.2fr);ga
 @keyframes actfx{0%{opacity:0;transform:translateY(4px)}15%{opacity:1}100%{opacity:0;transform:translateY(-16px)}}
 #toast{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);background:rgba(20,20,30,.92);color:#fff;border:1px solid #ff8fb1;padding:8px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99;max-width:90vw;text-align:center}
 #toast.on{opacity:1}
+.progbtn{font-size:11px;padding:4px 8px;letter-spacing:0;font-weight:600}
+.pms{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0 10px}
+.pms div{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 8px;font-size:12px}
+.pms b{display:block;font-size:14px;margin-top:2px}
+.ptab{width:100%;border-collapse:collapse;font-size:12px}
+.ptab th,.ptab td{padding:4px 3px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.ptab th:first-child,.ptab td:first-child{text-align:left}
+.ptab th{color:var(--sub);font-weight:600;font-size:11px}
+.pbar{display:inline-block;vertical-align:middle;width:46px;height:7px;background:var(--line);border-radius:4px;overflow:hidden;margin-right:4px}
+.pbar i{display:block;height:100%;background:#e8467c}
+.pwrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.pspark{width:100%;height:auto;display:block;margin-top:4px}
 .acts .cd{display:block;font-size:11px;color:var(--sub)}
 #log{height:300px;overflow-y:auto;font-size:13px;font-variant-numeric:tabular-nums;padding-right:4px}
 #log div{padding:3px 0;border-bottom:1px dashed #262a36}
@@ -160,7 +172,7 @@ footer{text-align:center;color:var(--sub);font-size:11px;padding:10px 0 20px}
   </section>
 
   <section class="card full" id="custPanel">
-    <h2>CUSTOMERS / 客サマリー＋客リスト</h2>
+    <h2 style="display:flex;justify-content:space-between;align-items:center;gap:8px">CUSTOMERS / 客サマリー＋客リスト <button type="button" id="progBtn" class="progbtn">📈 許容の歩み</button></h2>
     <div class="small">累計表示(そのレベル以上): お客さんごとの「これまでに到達した最高の許容度」を切り捨てたレベルで数え、「Lv.4以上」はLv.4かLv.5に達した人数です。バーをタップすると、そのレベル以上に絞り込めます(もう一度で解除)。</div>
     <div id="custSum" style="margin-top:6px"></div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:6px 0">
@@ -730,6 +742,7 @@ function step(){
 
 function newDay(wd){
   S.days++;
+  if(!S.mstat) progressRebuild(); progressDaily();
   dailyHealth();
   custDaily();
   S.shop.heat=clamp(S.shop.heat-(S.isOff?4:2.5)+RUMOR_HEAT*(S.rumor||0)/100,0,100);
@@ -988,6 +1001,7 @@ function finishWork(){
       if(!g){ const a=base*room; S.rumor=clamp((S.rumor||0)+a,0,100); S.rumorN.fromNew+=a; }
       else if(R()<RUMOR_REG_P){ const a=base*RUMOR_REG_K*room; S.rumor=clamp((S.rumor||0)+a,0,100); S.rumorN.fromReg+=a; } } }
   addDiary(c,type,g,eff,r,rsn,pre,rel,vibe,lv4rep);
+  { const pk0=S.cust[c.id]?S.cust[c.id].pk:0; progressRecord(c.id,eff,pk0); }
   updateCust(c,type,eff,vibe);
   if(!g){ S.bkN=S.bkN||{nw:0,ret:0}; S.bkN.nw++; if(S.regs[c.id]) S.bkN.ret++; else if(S.cust[c.id]) S.cust[c.id].once=true; }
   S.cur=null; setSt("back",ri(15,25));
@@ -1330,6 +1344,20 @@ function act(a,btn){
   save(); render(true);
 }
 // ボタンは一度だけ作り、以後は中身だけ更新(描画ループで作り直してクリックが消えないように)
+// 倍速ボタンも一度だけ作り、選択中の強調だけ更新(毎フレーム作り直すと高倍速でクリックが消えるため)
+const speedLabel = v=>v===0?"⏸ 一時停止":v===1?"▶ 1x":"⏩ "+v+"x";
+function renderSpeed(){
+  const box=$("speed");
+  if(box.children.length!==SPEEDS.length || !box.querySelector("[data-s]"))
+    box.innerHTML=SPEEDS.map(v=>`<button type="button" data-s="${v}">${v===0?"⏸":v===1?"▶ 1x":"⏩ "+v+"x"}</button>`).join("");
+  for(const b of box.children){ const on=S.speed===+b.dataset.s; if(b.classList.contains("on")!==on){ b.classList.toggle("on",on); b.setAttribute("aria-pressed",on?"true":"false"); } }
+}
+function setSpeed(v,btn){
+  const prev=S.speed; S.speed=v; acc=0;
+  renderSpeed(); flashBtn(btn,"fired");
+  toast(v===prev?`${speedLabel(v)} のまま`:v===0?"⏸ 一時停止しました":`${speedLabel(v)} にしました(実時間1秒 = ゲーム内${v}分)`);
+  save();
+}
 function renderActs(){
   const box=$("acts");
   if(box.children.length!==ACTS.length || !box.querySelector("[data-a]")){
@@ -1428,8 +1456,7 @@ function render(force){
     + stat("通算売上",yen(S.totalSales))+stat("貯金",yen(S.money))+stat("記録日数",S.days+"日");
   renderActs();
   $("goalinfo").textContent=(S.goal?`本日の目標: ${yen(S.goal)} (${Math.min(100,Math.round(d.sales/S.goal*100))}%)`:"目標は未設定です。")+" 「背中を押す/止める」は影響だけで、決めるのはひより本人です。"+` ${PP_NAME}は放置(実時間1時間に${PP_PER_HOUR})と節目で貯まり、日報の伏せ字・非公開メモを読むのに使います。`;
-  $("speed").innerHTML = SPEEDS.map(v=>`<button data-s="${v}" class="${S.speed===v?"on":""}">${v===0?"⏸":v===1?"▶ 1x":"⏩ "+v+"x"}</button>`).join("");
-  document.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{S.speed=+b.dataset.s;save();render(true);});
+  renderSpeed();
   const lk=S.log.length+":"+(S.log.length?S.log[S.log.length-1].t:0);
   if(force||lk!==lastLogLen){
     lastLogLen=lk; const el=$("log");
@@ -1483,6 +1510,71 @@ function lockedChapHtml(k,n){
   return `<div class="chap lock"><h4>🔒 第${k+1}章 (${n}件${full?`、必要${costDiary(k)}${PP_NAME}`:`/${DIARY_CHAPTER}件・執筆中`})${chapHasFlag(k)?' <span class="flag">✦ 節目を含む</span>':""}</h4>${full?ppBtn(costDiary(k),`data-ud="${k}"`):'<span class="small">3件たまると開けられるようになる</span>'}</div>`;
 }
 let lastCust="", custLimit=CUST_PAGE;
+// ---------- 許容の歩み(月ごとの小さな集計) ----------
+// S.mstat["YYYY-MM"] = {v:来店数, n4:Lv4以上の夜, n5:Lv5以上の夜, new4:初めてLv4に届いた客, u4/u5:その月の客ID(月が閉じたら人数 u4n/u5n に圧縮), tolEnd:月末の素の許容度, rec:再構築した月}
+// S.firstLv4 / S.firstLv5 = {day, approx?}。旧セーブは日記・日報から再構築(progressRebuild)、できない部分は「記録前」。
+const PROGRESS_SHOW_NUMBERS = true;   // false にすると数値を伏せてバーと線だけにする(将来の「ぼかす」切替用)
+const MSTAT_MAX = 36;                 // 保存する月数の上限
+function monthKey(n){ const d=new Date(2026,0,4+n); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"); }
+function monthLabel(k){ const [y,m]=k.split("-"); return `${+y===2026?"":y+"/"}${+m}月`; }
+function mstatNew(){ return {v:0,n4:0,n5:0,new4:0,u4:[],u5:[],tolEnd:null}; }
+function mstatCur(n){ if(!S.mstat) S.mstat={}; const k=monthKey(n); return S.mstat[k]||(S.mstat[k]=mstatNew()); }
+function mstatClose(m){ if(m.u4){ m.u4n=m.u4.length; delete m.u4; } if(m.u5){ m.u5n=m.u5.length; delete m.u5; } }
+const mU4 = m=>m.u4?m.u4.length:(m.u4n||0), mU5 = m=>m.u5?m.u5.length:(m.u5n||0);
+function progressRecord(id,eff,prevPk){
+  const n=dayNo(S.t), L=cLv(r1(eff)), m=mstatCur(n); m.v++;
+  if(L>=4){ m.n4++; if(!m.u4.includes(id)) m.u4.push(id); if(prevPk<4) m.new4++; if(!S.firstLv4) S.firstLv4={day:n}; }
+  if(L>=5){ m.n5++; if(!m.u5.includes(id)) m.u5.push(id); if(!S.firstLv5) S.firstLv5={day:n}; }
+}
+// 日次: 月が変わったら前の月を閉じる(月末の素の許容度を記録し、客IDを人数に圧縮)
+function progressDaily(){
+  const n=dayNo(S.t), kPrev=monthKey(n-1), k=monthKey(n);
+  if(kPrev!==k){ const m=S.mstat&&S.mstat[kPrev]; if(m){ m.tolEnd=r1(S.ch.tol); mstatClose(m); } mstatCur(n); }
+  const ks=Object.keys(S.mstat||{}).sort(); while(ks.length>MSTAT_MAX) delete S.mstat[ks.shift()];
+}
+// 旧セーブ: 日記(1来店1件)と日報(全体の許容度)から再構築
+function progressRebuild(){
+  S.mstat={}; const D=[...S.diary].sort((a,b)=>a.no-b.no);
+  const complete = (S.diaryNo||0)===D.length && (S.total||0)<=D.length;   // 全来店が日記に残っているか
+  S.mstatFrom = complete?null:(D.length?monthKey(D[0].day):monthKey(dayNo(S.t)));
+  const seen4=new Set(), seen5=new Set(); let f4=null,f5=null;
+  for(const e of D){ const k=monthKey(e.day), m=S.mstat[k]||(S.mstat[k]=mstatNew()); m.v++; m.rec=true; const L=cLv(e.tol||0);
+    if(L>=4){ m.n4++; if(e.cid&&!m.u4.includes(e.cid)) m.u4.push(e.cid); if(e.cid&&!seen4.has(e.cid)){ seen4.add(e.cid); if(complete) m.new4++; } if(f4==null) f4=e.day; }
+    if(L>=5){ m.n5++; if(e.cid&&!m.u5.includes(e.cid)) m.u5.push(e.cid); if(f5==null) f5=e.day; } }
+  if(!complete) for(const k in S.mstat) S.mstat[k].new4=null;   // 以前の到達点が分からないので出さない
+  const reps=[...S.reports].filter(r=>!r.holiday&&r.tol!=null).sort((a,b)=>a.day-b.day);
+  for(const r of reps){ const k=monthKey(r.day); if(S.mstat[k]) S.mstat[k].tolEnd=r.tol; }
+  const kNow=monthKey(dayNo(S.t)); for(const k in S.mstat) if(k!==kNow) mstatClose(S.mstat[k]);
+  S.firstLv4 = f4!=null?{day:f4,approx:!complete}:null; S.firstLv5 = f5!=null?{day:f5,approx:!complete}:null;
+  if(!complete && !S.firstLv4 && Object.values(S.cust).some(x=>x.pk>=4)) S.firstLv4={unknown:true};
+  if(!complete && !S.firstLv5 && Object.values(S.cust).some(x=>x.pk>=5)) S.firstLv5={unknown:true};
+  mstatCur(dayNo(S.t)); S.mstatRebuilt=true;
+}
+function openProgress(){
+  if(!S.mstat) progressRebuild();
+  const N=PROGRESS_SHOW_NUMBERS, num=(v,suf="")=>v==null?"—":N?`${v}${suf}`:"";
+  const start=1, ms=(f,lv)=>!f?`<div>${lv} が初めて出た日<b>まだ</b></div>`:f.unknown?`<div>${lv} が初めて出た日<b>記録前</b></div>`
+    :`<div>${lv} が初めて出た日<b>${dateStr(f.day)}${N?`(${f.day-start+1}日目)`:""}${f.approx?' <span class="small">記録上</span>':""}</b></div>`;
+  const kNow=monthKey(dayNo(S.t)), ks=Object.keys(S.mstat).sort();
+  let rows="";
+  if(S.mstatFrom) rows+=`<tr><td>${monthLabel(S.mstatFrom)}より前</td><td colspan="5" style="text-align:left" class="small">記録前</td></tr>`;
+  for(const k of ks){ const m=S.mstat[k], rate=m.v?Math.round(m.n4/m.v*100):0, now=k===kNow;
+    rows+=`<tr><td>${monthLabel(k)}${now?' <span class="small">途中</span>':""}</td><td>${num(mU4(m),"人")}</td><td>${m.new4==null?'<span class="small">記録前</span>':num(m.new4,"人")}</td><td>${num(mU5(m),"人")}</td>
+      <td><span class="pbar"><i style="width:${rate}%"></i></span>${num(rate,"%")}</td><td>${now?num(r1(S.ch.tol).toFixed(1)):m.tolEnd==null?'<span class="small">記録前</span>':num(m.tolEnd.toFixed(1))}</td></tr>`; }
+  // 素の許容度の折れ線(月末値。今月は現在値)
+  const pts=ks.map((k,i)=>({i,v:k===kNow?S.ch.tol:S.mstat[k].tolEnd})).filter(p=>p.v!=null);
+  let spark='<div class="small">記録前</div>';
+  if(pts.length){ const W=320,H=70,px=i=>ks.length<2?W/2:10+i*(W-20)/(ks.length-1), py=v=>H-8-(v/5)*(H-24);
+    const path=pts.map((p,j)=>`${j?"L":"M"}${px(p.i).toFixed(1)},${py(p.v).toFixed(1)}`).join(" ");
+    spark=`<svg class="pspark" viewBox="0 0 ${W} ${H}" role="img" aria-label="素の許容度の推移"><line x1="10" x2="${W-10}" y1="${py(4)}" y2="${py(4)}" stroke="#e8467c" stroke-dasharray="3 3" stroke-width="1" opacity=".5"/>
+      <path d="${path}" fill="none" stroke="#ff8fb1" stroke-width="2"/>${pts.map(p=>`<circle cx="${px(p.i).toFixed(1)}" cy="${py(p.v).toFixed(1)}" r="2.6" fill="#ff8fb1"/>${N?`<text x="${px(p.i).toFixed(1)}" y="${(py(p.v)-5).toFixed(1)}" font-size="9" fill="#9aa0b4" text-anchor="middle">${p.v.toFixed(1)}</text>`:""}`).join("")}</svg>
+      <div class="small">点線 = Lv.4 の目安 / 月末の値(今月は現在)</div>`; }
+  modal("📈 許容の歩み",`<div class="small">ゲーム内の月ごとの集計です(数値はメタ情報のみ)。</div>
+    <div class="pms">${ms(S.firstLv4,"Lv.4")}${ms(S.firstLv5,"Lv.5以上")}</div>
+    <div class="pwrap"><table class="ptab"><tr><th>月</th><th>Lv4以上</th><th>初Lv4</th><th>Lv5以上</th><th>Lv4以上の夜</th><th>素の許容度</th></tr>${rows}</table></div>
+    <div class="small" style="margin-top:4px">Lv4以上・Lv5以上 = その月に許した客の人数(同じ客は1人) / 初Lv4 = その月に初めてLv4に届いた客 / 割合 = その月の来店のうちLv4以上の夜</div>
+    <h4 style="margin:12px 0 2px;font-size:13px">素の許容度の成長</h4>${spark}`,true);
+}
 const LV_COL=["#f6c6d6","#f6c6d6","#ffaac4","#ff7aa5","#e8467c","#b8185a"];   // Lv3以降を段階的に濃く
 function custMarks(id,x,cur,d){
   let m="";
@@ -1603,6 +1695,7 @@ function loop(now){
 }
 document.addEventListener("click",e=>{
   const ab=e.target.closest("[data-a]"); if(ab){ act(ACTS[+ab.dataset.a],ab); return; }
+  const sb=e.target.closest("[data-s]"); if(sb){ setSpeed(+sb.dataset.s,sb); return; }
   const u=e.target.closest("[data-ur]"); if(u&&!u.disabled){unlockRed(+u.dataset.ur);return;}
   const m=e.target.closest("[data-um]"); if(m&&!m.disabled){unlockMemo(+m.dataset.um);return;}
   const dd=e.target.closest("[data-ud]"); if(dd&&!dd.disabled){const keep=custModalId; unlockDiary(+dd.dataset.ud); if(keep!=null) openCustDiary(keep); return;}
@@ -1633,6 +1726,8 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden){ S.last=D
 window.addEventListener("beforeunload",save);
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && document.getElementById("modal").style.display==="flex") closeModal(); });
 setInterval(save,10000);
+if(!S.mstat) progressRebuild();
+$("progBtn").onclick=openProgress;
 intro(); offline(); render(true); save();
 requestAnimationFrame(loop);
 // テスト用フック
