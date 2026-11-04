@@ -494,6 +494,12 @@ const DIARY_WALL = ["ここまでは無理。そこははっきり言った","�
   "できることと、できないことがある。今日は後者","最初から決めつけられると、扉は閉まる","やんわり、でもきっぱり断った"];
 const DIARY_EXPECT = ["期待されている感じがして、ちょっと嫌だった","何かを聞いてきた人みたいだった。少しだけ、もやっとした","「話と違う」って顔をされた。知らない",
   "最初から当然みたいな態度。そういうのが一番冷める","誰に何を聞いたんだろう。考えないことにした"];
+// 一度Lv5を許した客は、Lv4以上の夜にLv5になりやすい。ただしリスクがあるので毎回ではない(Lv4固定より弱い)
+const LV5_REPEAT_P = 0.6;      // Lv5経験1回の客の基準確率
+const LV5_REPEAT_STEP = 0.04;  // Lv5の回数が1回増えるごとの上乗せ
+const LV5_REPEAT_MAX = 0.8;    // 上限
+const LV5_REPEAT_MINTOL = 4.95;   // 実効許容度 min(全体, その客) がこれ未満の時期・相手では効かない
+const LV5_SAFE = {low:35, full:70};   // 安全度がfull以上で満額、lowで0(その間は比例)
 const LV4_REPEAT_P = 0.9;      // その夜Lv4以上に固定される確率
 const LV4_REPEAT_MIN = 4.0;    // 固定時の下限
 const LV4_REPEAT_RISK = 1.3;   // 固定された夜の体調リスク係数(新規の1.6より緩め、通常の1より高め)
@@ -742,7 +748,7 @@ function step(){
 
 function newDay(wd){
   S.days++;
-  if(!S.mstat) progressRebuild(); else if(S.progV!==2) progressUpgrade(); progressDaily();
+  if(!S.mstat) progressRebuild(); else if((S.progV||0)<3) progressUpgrade(); progressDaily();
   dailyHealth();
   custDaily();
   S.shop.heat=clamp(S.shop.heat-(S.isOff?4:2.5)+RUMOR_HEAT*(S.rumor||0)/100,0,100);
@@ -904,6 +910,14 @@ function finishWork(){
   if(type==="bad") eff=Math.min(eff,1);   // 生理的に無理な客は常に0〜1
   // Lv5(ここから先すべて)は、特別な相手か、仲良しの一部だけ
   if(eff>=4.5 && !(rel==="deep" || (rel==="close" && R()<.3))) eff=Math.min(eff,NEW_MAX_TOL);
+  // Lv5経験のある客(初めてのLv5は上の従来の仕組み): Lv4以上の夜は確率でLv5。外れた夜はLv4止まり
+  { const xc=S.cust[c.id], n5=xc?(xc.c5||0):0;
+    if(n5>0 && type!=="bad" && eff>=4){
+      const blocked = vibe==="wall"||vibe==="rude"||vibe==="irreg"||(g&&g.wall)||(g&&xc&&g.tol<(xc.pn??xc.pk)-.3)||Math.min(gTol,custTol)<LV5_REPEAT_MINTOL;
+      const safeK=clamp((100-ch.risk-LV5_SAFE.low)/(LV5_SAFE.full-LV5_SAFE.low),0,1);
+      const p=blocked?0:Math.min(LV5_REPEAT_MAX,LV5_REPEAT_P+LV5_REPEAT_STEP*(n5-1))*safeK;
+      eff = R()<p ? Math.max(eff,5.0) : Math.min(eff,NEW_MAX_TOL);
+    } }
   const reason = type==="bad" ? "duty_bad" : pickReason(trust,type);
   const rsn = reason==="duty_bad"?(ch.duty>0&&R()<ch.duty/100?"duty":"habit"):reason;
   const pre={tol:ch.tol,love:g?g.love:0};
@@ -1525,13 +1539,16 @@ const mU4 = m=>m.u4?m.u4.length:(m.u4n||0), mU5 = m=>m.u5?m.u5.length:(m.u5n||0)
 function progressRecord(id,eff){
   const n=dayNo(S.t), L=cLv(r1(eff)), m=mstatCur(n), x=S.cust[id]; m.v++;
   if(L>=4){ m.n4++; if(!m.u4.includes(id)) m.u4.push(id); if(x && x.r4==null){ x.r4=n; if(m.new4!=null) m.new4++; } if(!S.firstLv4) S.firstLv4={day:n}; }
-  if(L>=5){ m.n5++; if(!m.u5.includes(id)) m.u5.push(id); if(x && x.r5==null){ x.r5=n; if(m.new5!=null) m.new5++; } if(!S.firstLv5) S.firstLv5={day:n}; }
+  if(L>=5){ m.n5++; if(x) x.c5=(x.c5||0)+1; if(!m.u5.includes(id)) m.u5.push(id); if(x && x.r5==null){ x.r5=n; if(m.new5!=null) m.new5++; } if(!S.firstLv5) S.firstLv5={day:n}; }
 }
 // 初到達の目印(r4/r5)が無いセーブ向け: 日記と到達点から付け、初Lv5の月次値を再構築(できない月は「記録前」)
 function progressUpgradeFlags(){
   for(const e of S.diary){ const x=S.cust[e.cid]; if(!x) continue; const L=cLv(e.tol||0); if(L>=4&&(x.r4==null||x.r4>e.day)) x.r4=e.day; if(L>=5&&(x.r5==null||x.r5>e.day)) x.r5=e.day; }
   for(const id in S.cust){ const x=S.cust[id]; if(x.r4==null && cLv(x.pk)>=4) x.r4=-1; if(x.r5==null && cLv(x.pk)>=5) x.r5=-1; }   // 日付不明の到達は -1
-  S.progV=2;
+  // Lv5の回数(c5): 日記から数え、日記に無くても到達済みなら1回とみなす
+  const c5={}; for(const e of S.diary) if(e.cid && cLv(e.tol||0)>=5) c5[e.cid]=(c5[e.cid]||0)+1;
+  for(const id in S.cust){ const x=S.cust[id]; if(x.c5==null) x.c5=c5[id]||(x.r5!=null?1:0); }
+  S.progV=3;
 }
 function progressUpgrade(){
   const D=[...S.diary].sort((a,b)=>a.no-b.no), complete=(S.diaryNo||0)===D.length && (S.total||0)<=D.length;
@@ -1539,7 +1556,7 @@ function progressUpgrade(){
   const redo=new Set(); for(const k in S.mstat||{}){ const m=S.mstat[k]; if(m.new5===undefined){ m.new5=null; redo.add(k); } }
   if(complete && redo.size){ const seen=new Set(); for(const k of redo) S.mstat[k].new5=0;
     for(const e of D){ if(cLv(e.tol||0)>=5 && e.cid && !seen.has(e.cid)){ seen.add(e.cid); const k=monthKey(e.day); if(redo.has(k)) S.mstat[k].new5++; } } }
-  S.progV=2;
+  S.progV=3;
 }
 // 日次: 月が変わったら前の月を閉じる(月末の素の許容度を記録し、客IDを人数に圧縮)
 function progressDaily(){
@@ -1742,7 +1759,7 @@ document.addEventListener("visibilitychange",()=>{ if(document.hidden){ S.last=D
 window.addEventListener("beforeunload",save);
 document.addEventListener("keydown",e=>{ if(e.key==="Escape" && document.getElementById("modal").style.display==="flex") closeModal(); });
 setInterval(save,10000);
-if(!S.mstat) progressRebuild(); else if(S.progV!==2) progressUpgrade();
+if(!S.mstat) progressRebuild(); else if((S.progV||0)<3) progressUpgrade();
 $("progBtn").onclick=openProgress;
 intro(); offline(); render(true); save();
 requestAnimationFrame(loop);
